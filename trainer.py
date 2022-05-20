@@ -32,17 +32,22 @@ class Trainer:
         self.optimizer = self._get_optimizer(model, self.optim_cls)
         self.scheduler = self._get_scheduler(self.decay_fn)
         self.scaler = torch.cuda.amp.GradScaler()
+        best_performance, best_epoch = 0, 0
 
         for epoch in range(1, num_epoch+1):
-            self._training_step(model, train_loader, self.loss_fn)
+            print(f"Epoch {epoch}, train_loss:{self._training_step(model, train_loader, self.loss_fn)}")
             val_loss = self._validation_step(model, validation_loader, self.loss_fn, self.metric_dict)
 
             if epoch % save_config["freq"] == 0:
                 torch.save(model, save_config["path"])
+            if best_performance < -val_loss:
+                best_performance, best_epoch = -val_loss, epoch
+                torch.save(model, save_config["best_path"]) 
             if track: 
                 self.scheduler.step(val_loss.item())
             else: 
                 self.scheduler.step()
+        print(f"Best loss :{-best_performance} at {epoch} epoch.")
 
     def _training_step(self, model, train_loader, loss_fn): 
         model.train()
@@ -82,8 +87,7 @@ class Trainer:
 
                     total_loss += loss.item() * data.size(0)
                     loop.set_postfix(loss=loss.item())
-
-        print("train_loss:", total_loss/len(train_loader.dataset))
+        return total_loss/len(train_loader.dataset)
 
     @torch.no_grad()
     def _validation_step(self, model, validation_loader, loss_fn, metric_dict): 
