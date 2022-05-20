@@ -12,10 +12,13 @@ from config import *
 if __name__ == "__main__":
     np.random.seed(seed)
     image_path_list = sorted(glob.glob(train_image_dir + "*" + img_suffix))
+    assert len(image_path_list) > 0
+    
     split_index = int(len(image_path_list) * train_ratio)
     train_path_list = image_path_list[:split_index]
     test_path_list = image_path_list[split_index:]
 
+    
     # dataset & dataloader
     train_data = StasDataset(train_path_list, label_dir, image_transform=Train_Preprocessor(train_img_size, 
                                                                                             h_flip_p=h_flip_p, 

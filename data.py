@@ -9,7 +9,7 @@ from torchvision import transforms
 from torchvision.transforms import functional as F
 from torchvision.transforms import InterpolationMode
 import patchify
-from config import * 
+from configs.config import * 
 
 class StasDataset(Dataset):
     def __init__(self, image_path_list, label_dir, image_transform=None, ann_suffix=ann_suffix):
