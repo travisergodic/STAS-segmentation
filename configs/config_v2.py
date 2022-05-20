@@ -1,4 +1,5 @@
-# dice loss: 0.142
+# dice score 0.119
+# 0.873
 import torch
 from torch import optim
 import segmentation_models_pytorch as smp
@@ -24,22 +25,28 @@ affine_p=0.
 
 # dataloader
 train_ratio = 0.85
-train_batch_size = 8
-test_batch_size = 16
+train_batch_size = 16
+test_batch_size = 32
 num_workers = 4
 
 # train config 
-num_epoch = 30
+num_epoch = 100
 decay_fn = lambda n: 1
-is_sam = True
-optim_cls = optim.Adam
+is_sam = False 
+optim_cls = optim.AdamW
 optim_dict = {
-    'lr': 3e-5, 
-    # 'weight_decay': 1e-2
+    'lr': 1e-4, 
+    'weight_decay': 1e-2
 }
 
 ## model 
-model = torch.load("./models/model_origin.pt").to(DEVICE)
+model = smp.Unet(
+    encoder_name="tu-tf_efficientnetv2_l_in21k",     
+    encoder_weights="imagenet",     
+    in_channels=3,                  
+    classes=1,
+    decoder_attention_type='scse'
+    ).to(DEVICE)
 
 # 384, 480
 # tu-tf_efficientnetv2_l_in21k
@@ -48,8 +55,8 @@ model = torch.load("./models/model_origin.pt").to(DEVICE)
 
 ## save
 save_config = {
-    "path": './models/model_v1.pt',
-    "best_path": './models/model_v1_best.pt',
+    "path": './models/model_v2.pt',
+    "best_path": './models/model_v2_best.pt',
     "freq": 5
 }
 

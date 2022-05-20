@@ -32,7 +32,7 @@ class Trainer:
         self.optimizer = self._get_optimizer(model, self.optim_cls)
         self.scheduler = self._get_scheduler(self.decay_fn)
         self.scaler = torch.cuda.amp.GradScaler()
-        best_performance, best_epoch = 0, 0
+        best_performance, best_epoch = -100, 0
 
         for epoch in range(1, num_epoch+1):
             print(f"Epoch {epoch}, train_loss:{self._training_step(model, train_loader, self.loss_fn)}")
