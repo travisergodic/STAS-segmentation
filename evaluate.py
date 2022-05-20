@@ -1,9 +1,10 @@
+import cv2
 import os 
 import torch 
 from torchvision.transforms import Resize, InterpolationMode
 from torchvision.transforms.functional import hflip, vflip
 from data import Test_Preprocessor
-from config import * 
+from configs.config import * 
 from tqdm import tqdm
 from PIL import Image
 import glob
@@ -21,13 +22,13 @@ class Evaluator:
         x = self.image_transform(Image.open(path).convert('RGB'), None)[0].to(self.device)
         if do_tta: 
             X, tta_fns = self._forward_TTA(x)
-            mask = self._backward_TTA(model(X), tta_fns)
+            mask = self._backward_TTA(self.model(X), tta_fns)
             if vote_mode == 'any': 
                 mask = (mask > 0.5).any(dim=0).squeeze()
             elif vote_mode == 'soft': 
                 mask = (mask.mean(dim=0).squeeze() > 0.5)
         else: 
-            mask = model(x.unsqueeze(0)).squeeze() > 0.5
+            mask = self.model(x.unsqueeze(0)).squeeze() > 0.5
 
         if mask_mode ==  'color': 
             mask = torch.where(mask, 255, 0)
@@ -54,10 +55,13 @@ class Evaluator:
         assert hasattr(paths, '__iter__'), "Input Variable paths is not iterable!"
         for path in paths: 
             assert os.path.isfile(path), f"'{path}' does not exist!"
+        origin_size = cv2.imread(paths[0]).shape[:2]
+        print(f"Use {origin_size} as output!")
         
         self.model.eval()
         for path in tqdm(paths): 
             mask = self._predict(path, mask_mode, do_tta, vote_mode)
+            mask = Resize(origin_size, InterpolationMode.NEAREST)(mask.unsqueeze(0)).squeeze()
             self._save(mask.cpu().numpy().astype(np.uint8), path, save_dir)
         
     def _save(self, mask, path, save_dir): 
