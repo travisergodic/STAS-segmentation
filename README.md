@@ -6,8 +6,8 @@ pip install patchify
 pip install transformers
 pip install einops
 
-%cd /content/STAS-segmentation
-%mkdir models
+cd /content/STAS-segmentation
+mkdir models
 git clone https://github.com/davda54/sam.git
 ```
 
