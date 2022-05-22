@@ -2,14 +2,33 @@ import os
 import time
 import numpy as np 
 import glob
+import argparse
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 from trainer import Trainer
 from data import StasDataset, Train_Preprocessor, Test_Preprocessor
-from configs.config import *
+from batch_sampler import BatchSampler,RandomSampler
+from configs.config import * 
 
 
-if __name__ == "__main__":
+np.random.seed(seed)
+image_path_list = sorted(glob.glob(train_image_dir + "*" + img_suffix))
+assert len(image_path_list) > 0
+split_index = int(len(image_path_list) * train_ratio)
+train_path_list = image_path_list[:split_index]
+test_path_list = image_path_list[split_index:]
+
+
+def boolean_string(s):
+    if s == 'False': 
+        return False
+    elif s == 'True': 
+        return True   
+    else:
+        raise ValueError('Not a valid boolean string')
+
+        
+def train(): 
     np.random.seed(seed)
     image_path_list = sorted(glob.glob(train_image_dir + "*" + img_suffix))
     assert len(image_path_list) > 0
@@ -17,16 +36,32 @@ if __name__ == "__main__":
     split_index = int(len(image_path_list) * train_ratio)
     train_path_list = image_path_list[:split_index]
     test_path_list = image_path_list[split_index:]
-
     
-    # dataset & dataloader
-    train_data = StasDataset(train_path_list, label_dir, image_transform=Train_Preprocessor(train_img_size, 
-                                                                                            h_flip_p=h_flip_p, 
-                                                                                            v_flip_p=v_flip_p))
-    test_data = StasDataset(test_path_list, label_dir, image_transform=Test_Preprocessor(test_img_size))
-
-    train_dataloader = DataLoader(train_data, batch_size=train_batch_size, shuffle=True, num_workers=num_workers)
-    test_dataloader = DataLoader(test_data, batch_size=test_batch_size, num_workers=num_workers)
+    # preprocesor 
+    train_image_transform = Train_Preprocessor(None if do_multiscale else train_img_size,
+                                         h_flip_p=h_flip_p,
+                                         v_flip_p=v_flip_p)
+    test_image_transform = Test_Preprocessor(test_img_size)
+    
+    # dataset
+    train_dataset = StasDataset(train_path_list, label_dir, train_image_transform, ann_suffix)
+    test_dataset = StasDataset(test_path_list, label_dir, test_image_transform, ann_suffix)
+    
+    # batchsampler & dataloader 
+    if do_multiscale:
+        batch_sampler = BatchSampler(RandomSampler(train_dataset),
+                                     batch_size=train_batch_size,
+                                     drop_last=False,
+                                     multiscale_step=multiscale_step,
+                                     img_sizes=multiscale_list)
+    else: 
+        batch_sampler = None
+        
+    train_dataloader = DataLoader(dataset=train_dataset,
+                                  batch_sampler=batch_sampler,
+                                  num_workers=num_workers)
+   
+    test_dataloader = DataLoader(test_dataset, batch_size=test_batch_size, num_workers=num_workers)
 
     # train_model
     start = time.time()
@@ -34,3 +69,44 @@ if __name__ == "__main__":
     train_pipeline.compile(optim_cls, decay_fn, loss_fn, metric_dict, is_sam, DEVICE, **optim_dict)
     train_pipeline.fit(model, train_dataloader, test_dataloader, num_epoch, save_config)
     print(f"Training takes {time.time() - start} seconds!")
+    
+    
+def evaluate(test_image_path_list, test_label_path_list, do_tta, do_multiscale, vote_mode):
+    test_image_transform =  Test_Preprocessor(None if (do_multiscale and do_tta) else test_img_size)
+    evaluator = Evaluator(model, test_image_transform, device='cuda')
+    print("dice score:", evaluator.evaluate(test_image_path_list, test_label_path_list, do_tta, vote_mode))
+    
+    
+def make_prediction(image_dir, mask_mode, do_tta, do_multiscale, vote_mode):
+    if os.path.isdir('./predict_result'): 
+        import shutil 
+        shutil.rmtree('./predict_result')
+        print("Delete directory: predict_result/")
+    os.mkdir('./predict_result')   
+    print("Create directory: predict_result/")
+        
+    test_image_transform =  Test_Preprocessor(None if (do_multiscale and do_tta) else test_img_size)
+    evaluator = Evaluator(model, test_image_transform, device='cuda')
+    evaluator.make_prediction(image_dir, './predict_result', mask_mode, do_tta, vote_mode)
+    
+    
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Semantic segmentation for medical dataset!")
+    parser.add_argument("--mode", type=str, default='train')
+    parser.add_argument("--do_tta", type=boolean_string)
+    parser.add_argument("--do_multiscale", type=boolean_string)
+    parser.add_argument("--vote_mode", type=str)
+    parser.add_argument("--target_dir", type=str)
+    args = parser.parse_args()
+
+    if args.mode == "train": 
+        train()
+        
+    elif args.mode == "evaluate":
+        test_image_path_list = test_path_list
+        test_label_path_list = [os.path.join(label_dir, "label_" + os.path.basename(image_path).split(".")[0] + ".npz") for image_path in test_image_path_list]
+        evaluate(test_image_path_list, test_label_path_list, args.do_tta, args.do_multiscale, args.vote_mode)
+            
+    elif args.mode == "make_prediction": 
+        make_prediction(args.target_dir, args.mask_mode, args.do_tta, args.do_multiscale, args.vote_mode)
+       

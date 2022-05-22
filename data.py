@@ -2,23 +2,30 @@ import os
 import random
 import numpy as np
 from PIL import Image
-import torch
-from torch import nn
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms
-from torchvision.transforms import functional as F
-from torchvision.transforms import InterpolationMode
 import patchify
-from configs.config import * 
+import torch 
+import torch.nn as nn
+from torch.utils.data import Dataset,DataLoader 
+from torchvision import transforms
+from torchvision.transforms.functional import InterpolationMode
+import torchvision.transforms.functional as F
+# from configs.config import * 
+
 
 class StasDataset(Dataset):
-    def __init__(self, image_path_list, label_dir, image_transform=None, ann_suffix=ann_suffix):
+    def __init__(self, image_path_list, label_dir, image_transform, ann_suffix):
         self.image_path_list = image_path_list
         self.label_dir = label_dir
         self.image_transform = image_transform 
         self.ann_suffix = ann_suffix
+        self.resize_fn_dict = {}
     
-    def __getitem__(self, index):
+    def __getitem__(self, item):
+        if type(item) == int: 
+            index, size = item, None
+        elif type(item) == list or type(item) == tuple:
+            index, size = item
+        
         image = Image.open(self.image_path_list[index]).convert('RGB')
         
         if self.ann_suffix == '.png':
@@ -28,6 +35,13 @@ class StasDataset(Dataset):
             label_path = os.path.join(self.label_dir, 'label_' + os.path.basename(self.image_path_list[index]).split(".")[0] + self.ann_suffix)
             label = torch.from_numpy(np.load(label_path)['image']).unsqueeze(dim=0)
 
+        if size is not None:
+            if size not in self.resize_fn_dict: 
+                self.resize_fn_dict[size] = transforms.Resize((size, size), interpolation=InterpolationMode.NEAREST)
+            image = self.resize_fn_dict[size](image)
+            label = self.resize_fn_dict[size](label)
+        
+        # if multiscale_list is None, image transform should not contain resize function 
         if self.image_transform is not None:
             image, label = self.image_transform(image, label)
         return image, label
@@ -36,11 +50,15 @@ class StasDataset(Dataset):
         return len(self.image_path_list)
 
 
+
 class Train_Preprocessor(nn.Module): 
-    def __init__(self, img_size, h_flip_p=0.5, v_flip_p=0.5):
+    def __init__(self, img_size=None, h_flip_p=0.5, v_flip_p=0.5):
         super().__init__()
-        self.img_size = img_size
-        self.resize = transforms.Resize(self.img_size, interpolation=InterpolationMode.NEAREST) 
+        if img_size is not None: 
+            self.img_size = img_size
+            self.resize = transforms.Resize(self.img_size, interpolation=InterpolationMode.NEAREST) 
+        else: 
+            self.resize = nn.Identity()
         self.jitter = transforms.ColorJitter(0.25, 0.25, 0.25)
         self.blur = transforms.GaussianBlur((1, 3))
         self.h_flip_p = h_flip_p
@@ -71,8 +89,8 @@ class Train_Preprocessor(nn.Module):
         # Random vertical flipping
         if random.random() < self.v_flip_p:
             img = F.vflip(img)
-            label = F.vflip(label)        
-
+            label = F.vflip(label)       
+            
         # random affine
         # if random.random() < self.affine_p: 
         #     affine_param = transforms.RandomAffine.get_params(
@@ -103,6 +121,7 @@ class Train_Preprocessor(nn.Module):
         #                      random_resize_param[0], random_resize_param[1], 
         #                      random_resize_param[2], random_resize_param[3], 
         #                      self.img_size, InterpolationMode.NEAREST)
+
         return self.preprocess(img), label
 
 

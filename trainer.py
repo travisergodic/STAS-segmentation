@@ -57,9 +57,7 @@ class Trainer:
         for batch_idx, (data, targets) in enumerate(loop):
             data = data.to(device=self.device)
             targets = targets.type(torch.float).to(device=self.device)
-            # data, targets = self.train_augmentation(data, targets)
-            # targets = targets.type(torch.LongTensor).to(device=self.device)
-
+         
             # forward
             if self.is_sam:
                 # first forward-backward pass
