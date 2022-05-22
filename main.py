@@ -102,7 +102,7 @@ def make_prediction(model, image_dir, mask_mode, do_tta, multiscale_list):
         print("Delete directory: predict_result/")
     os.mkdir('./predict_result')   
     print("Create directory: predict_result/")
-    test_image_transform =  Test_Preprocessor(None if (len(multiscale_list) > 0 and do_tta) else test_img_size)
+    test_image_transform =  Test_Preprocessor(None if (multiscale_list is not None and do_tta) else test_img_size)
     evaluator = Evaluator(model, test_image_transform, device='cuda')
     evaluator.make_prediction(image_dir, './predict_result', mask_mode, do_tta, multiscale_list)
     
