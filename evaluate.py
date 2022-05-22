@@ -31,9 +31,9 @@ class Evaluator:
             else: 
                 origin_size = x.size()[1:] 
                 X_dict, tta_fns = self._forward_TTA(x, multiscale_list)
-                mask = torch.zeros(*origin_size)
-                for X in X_dict: 
-                    mask += Resize(origin_size, interpolation=InterpolationMode.NEAREST)(self._backward_TTA(self.model(X), tta_fns).mean(dim=0)).squeeze()
+                mask = torch.zeros(*origin_size).to(self.device)
+                for key in X_dict: 
+                    mask += Resize(origin_size, interpolation=InterpolationMode.NEAREST)(self._backward_TTA(self.model(X_dict[key]), tta_fns).mean(dim=0)).squeeze()
                 mask = mask/len(X_dict) > 0.5 
                 
         # no test time augmentation
@@ -61,7 +61,7 @@ class Evaluator:
         self.model.eval()
         for image_path, label_path in tqdm(list(zip(image_paths, label_paths))): 
             gt = torch.from_numpy(np.load(label_path)['image']).to(self.device)
-            mask = self._predict(image_path, mask_mode='class', do_tta, multiscale_list)
+            mask = self._predict(image_path, 'class', do_tta, multiscale_list)
             mask = Resize(gt.shape, InterpolationMode.NEAREST)(mask.unsqueeze(0)).squeeze()
             total_score += Evaluator.dice_score(mask, gt)
         return total_score/len(image_paths)            
@@ -72,7 +72,7 @@ class Evaluator:
         if type(paths) == str: 
             assert os.path.isdir(paths), "Input variable 'path' is not a directory!"
             img_dir = paths
-            paths = [os.path.join(paths, basename) for bansename in os.listdir(paths)]
+            paths = [os.path.join(paths, basename) for basename in os.listdir(paths)]
             print(f"Find {len(paths)} files under {img_dir}")
         else: 
             assert os.path.isfile(path), f"'{path}' does not exist!"
@@ -106,7 +106,7 @@ class Evaluator:
         if multiscale_list is None:
             return torch.stack([tta_fn(x) for tta_fn in tta_fns], dim=0), tta_fns
         res_dict = dict()
-        for scale in multisclae_list:
+        for scale in multiscale_list:
             res_dict[scale] = torch.stack([Resize((scale, scale), interpolation=InterpolationMode.NEAREST)(tta_fn(x)) for tta_fn in tta_fns], dim=0)
         return res_dict, tta_fns
     

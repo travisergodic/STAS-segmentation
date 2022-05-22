@@ -126,16 +126,19 @@ class Train_Preprocessor(nn.Module):
 
 
 class Test_Preprocessor(nn.Module): 
-    def __init__(self, img_size, patches=None):
+    def __init__(self, img_size=None, patches=None):
         super().__init__()
         self.img_size = img_size
         self.patches = patches
 
-        if self.patches is not None: 
-            self.resize = transforms.Resize((img_size[0] * patches[0], img_size[1] * patches[1]), interpolation=InterpolationMode.NEAREST)
+        if self.img_size is None: 
+            self.resize = nn.Identity()
         else: 
-            self.resize = transforms.Resize(img_size, interpolation=InterpolationMode.NEAREST)
-        
+            if self.patches is not None: 
+                self.resize = transforms.Resize((img_size[0] * patches[0], img_size[1] * patches[1]), interpolation=InterpolationMode.NEAREST)
+            else: 
+                self.resize = transforms.Resize(img_size, interpolation=InterpolationMode.NEAREST)
+
         self.preprocess = transforms.Compose(
             [ 
               transforms.ToTensor(),

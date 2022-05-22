@@ -87,24 +87,24 @@ def evaluate_all(model, test_image_path_list, test_label_path_list, multiscale_l
     print(f"No TTA: {score} (Dice score).")
     # only flip 
     evaluator = Evaluator(model, test_image_transform, device='cuda')
-    score = evaluator.evaluate(test_image_path_list, test_label_path_list, do_tta=True, vote_mode='soft')
+    score = evaluator.evaluate(test_image_path_list, test_label_path_list, do_tta=True, multiscale_list=None)
     print(f"Only Flip TTA soft voting: {score} (Dice score).")
     # flip + multiscale 
-    # test_image_transform =  Test_Preprocessor(None)
-    # score = evaluator.evaluate(test_image_path_list, test_label_path_list, do_tta=True, vote_mode='soft', multiscale_list=multiscale_list)
-    # print(f"Flip + Multiscale TTA soft voting: {score} (Dice score).")
+    test_image_transform =  Test_Preprocessor(None)
+    score = evaluator.evaluate(test_image_path_list, test_label_path_list, do_tta=True, multiscale_list=multiscale_list)
+    print(f"Flip + Multiscale TTA soft voting: {score} (Dice score).")
     
     
-def make_prediction(model, image_dir, mask_mode, do_tta, do_multiscale, vote_mode, multiscale_list):
+def make_prediction(model, image_dir, mask_mode, do_tta, multiscale_list):
     if os.path.isdir('./predict_result'): 
         import shutil 
         shutil.rmtree('./predict_result')
         print("Delete directory: predict_result/")
     os.mkdir('./predict_result')   
     print("Create directory: predict_result/")
-    test_image_transform =  Test_Preprocessor(None if (do_multiscale and do_tta) else test_img_size)
+    test_image_transform =  Test_Preprocessor(None if (len(multiscale_list) > 0 and do_tta) else test_img_size)
     evaluator = Evaluator(model, test_image_transform, device='cuda')
-    evaluator.make_prediction(image_dir, './predict_result', mask_mode, do_tta, vote_mode, multiscale_list)
+    evaluator.make_prediction(image_dir, './predict_result', mask_mode, do_tta, multiscale_list)
     
     
 if __name__ == "__main__":
@@ -112,8 +112,7 @@ if __name__ == "__main__":
     parser.add_argument("--mode", type=str, default='train')
     parser.add_argument("--model_path", type=str)
     parser.add_argument("--do_tta", type=boolean_string)
-    parser.add_argument("--multiscale", type=str)
-    parser.add_argument("--vote_mode", type=str)
+    parser.add_argument("--multiscale", type=str, default=None)
     parser.add_argument("--target_dir", type=str)
     parser.add_argument("--mask_mode", type=str)
     args = parser.parse_args()
@@ -128,11 +127,14 @@ if __name__ == "__main__":
         test_label_path_list = [os.path.join(label_dir, "label_" + os.path.basename(image_path).split(".")[0] + ".npz") for image_path in test_image_path_list]
         
         model = torch.load(args.model_path).to(DEVICE)
-        multiscale_list = args.multiscale.split(",") 
+        multiscale_list = [int(ele.strip()) for ele in args.multiscale.split(",")]
         evaluate_all(model, test_image_path_list, test_label_path_list, multiscale_list)
     
     # input mode, model_path, target_dir, mask_mode, do_tta, vote_mode, multiscale_list
     elif args.mode == "make_prediction": 
         model = torch.load(args.model_path).to(DEVICE)
-        multiscale_list = args.multiscale.split(",")
-        make_prediction(model, args.target_dir, args.mask_mode, args.do_tta, args.vote_mode, multiscale_list)
+        if args.multiscale is not None: 
+            multiscale_list = [int(ele.strip()) for ele in args.multiscale.split(",")]
+        else: 
+            multiscale_list = None
+        make_prediction(model, args.target_dir, args.mask_mode, args.do_tta, multiscale_list)
