@@ -1,13 +1,14 @@
 import torch
 from tqdm import tqdm 
 from sam.sam import SAM
+from utils import mixup_data, mixup_criterion
 
 
 class Trainer:
     def __init__(self):
         pass
 
-    def compile(self, optim_cls, decay_fn, loss_fn, metric_dict, is_sam, device, **kwargs): 
+    def compile(self, optim_cls, decay_fn, loss_fn, metric_dict, is_sam, do_mixup, device, **kwargs): 
         # self.train_augmentation = train_augmentation
         # self.validation_augmentation = validation_augmentation
         self.decay_fn = decay_fn 
@@ -15,6 +16,7 @@ class Trainer:
         self.loss_fn = loss_fn
         self.metric_dict = metric_dict
         self.is_sam = is_sam
+        self.do_mixup = is_mixup
         self.optim_cls = optim_cls
         self.kwargs = kwargs  
 

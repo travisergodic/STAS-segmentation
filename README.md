@@ -8,7 +8,7 @@ pip install einops
 
 %cd /content/STAS-segmentation
 %mkdir models
-!git clone https://github.com/davda54/sam.git
+git clone https://github.com/davda54/sam.git
 ```
 
 ## 使用
