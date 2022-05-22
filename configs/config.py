@@ -43,13 +43,15 @@ optim_dict = {
 }
 
 ## model 
-model = smp.Unet(
-    encoder_name="tu-tf_efficientnetv2_l_in21k",     
-    encoder_weights="imagenet",     
-    in_channels=3,                  
-    classes=1,
-    # decoder_attention_type='scse'
-    ).to(DEVICE)
+checkpoint_path = None
+model_cls = smp.Unet
+model_config = {
+    'encoder_name': 'tu-tf_efficientnetv2_l_in21k',
+    'encoder_weights': 'imagenet',
+    'in_channels': 3,
+    'classes': 1,
+    # 'decoder_attention_type'='scse'
+}
 
 # 384, 480
 # tu-tf_efficientnetv2_l_in21k

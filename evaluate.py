@@ -38,7 +38,7 @@ class Evaluator:
             self._check_range(mask, [0, 1])
         return mask
     
-    def evaluate(self, image_paths, label_paths, do_tta=True, vote_mode='any', multiscale_list=None): 
+    def evaluate(self, image_paths, label_paths, do_tta=True, vote_mode='soft', multiscale_list=None): 
         if isinstance(image_paths, str) and isinstance(label_paths, str): 
             assert os.path.isdir(image_paths) and os.path.isdir(label_paths), f"{image_paths} or {label_paths} is not a directory!"
             image_paths = sorted([os.path.join(image_paths, basename) for basename in os.listdir(image_paths)])
@@ -56,7 +56,7 @@ class Evaluator:
             total_score += Evaluator.dice_score(mask, gt)
         return total_score/len(image_paths)            
     
-    def make_prediction(self, paths, save_dir, mask_mode='color', do_tta=True, vote_mode='any', multiscale_list=None): 
+    def make_prediction(self, paths, save_dir, mask_mode='color', do_tta=True, vote_mode='soft', multiscale_list=None): 
         assert mask_mode in ('color', 'class')
         assert vote_mode in ('any', 'soft')
         assert hasattr(paths, '__iter__'), "Input Variable paths is not iterable!"
@@ -87,9 +87,10 @@ class Evaluator:
             res += (mask == ele).long()
         assert torch.all(res > 0)
         
-    def _check_multiscale(self, multiscale_list): 
-        for multiscale in multiscale_list: 
-            assert isinstance(multiscale, int) and multiscale % 8 == 0
+    def _check_multiscale(self, multiscale_list):
+        if multiscale_list is not None:
+            for multiscale in multiscale_list: 
+                assert isinstance(multiscale, int) and multiscale % 32 == 0
         
     def _forward_TTA(self, x, multiscale_list=None):
         tta_fns = [[x, y] for x in [lambda x: x, hflip] for y in [lambda x: x, vflip]]
@@ -101,7 +102,7 @@ class Evaluator:
     
     def _backward_TTA(self, X, tta_fns):
         return torch.stack(
-            [tta_fn(X.select(0, index)) for tta_fn in tta_fns], dim=0
+            [tta_fns[i](X.select(0, i)) for i in range(len(tta_fns))], dim=0
         )
 
     @staticmethod

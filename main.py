@@ -9,6 +9,7 @@ from trainer import Trainer
 from data import StasDataset, Train_Preprocessor, Test_Preprocessor
 from batch_sampler import BatchSampler,RandomSampler
 from configs.config import * 
+from evaluate import Evaluator
 
 
 np.random.seed(seed)
@@ -63,6 +64,13 @@ def train():
    
     test_dataloader = DataLoader(test_dataset, batch_size=test_batch_size, num_workers=num_workers)
 
+    # create model
+    if checkpoint_path is not None: 
+        model = torch.load(checkpoint_path).to(device)
+        print(f'Load model from {checkpoint_path} successfully!')
+    else:
+        model = model_cls(**model_config)
+    
     # train_model
     start = time.time()
     train_pipeline = Trainer()
@@ -71,42 +79,60 @@ def train():
     print(f"Training takes {time.time() - start} seconds!")
     
     
-def evaluate(test_image_path_list, test_label_path_list, do_tta, do_multiscale, vote_mode):
-    test_image_transform =  Test_Preprocessor(None if (do_multiscale and do_tta) else test_img_size)
+def evaluate_all(model, test_image_path_list, test_label_path_list, multiscale_list):
+    test_image_transform =  Test_Preprocessor(test_img_size)
     evaluator = Evaluator(model, test_image_transform, device='cuda')
-    print("dice score:", evaluator.evaluate(test_image_path_list, test_label_path_list, do_tta, vote_mode))
+    # no aug
+    score = evaluator.evaluate(test_image_path_list, test_label_path_list, do_tta=False)
+    print(f"No TTA: {score} (Dice score).")
+    # only flip 
+    evaluator = Evaluator(model, test_image_transform, device='cuda')
+    score = evaluator.evaluate(test_image_path_list, test_label_path_list, do_tta=True, vote_mode='soft')
+    print(f"Only Flip TTA soft voting: {score} (Dice score).")
+    # flip + multiscale 
+    # test_image_transform =  Test_Preprocessor(None)
+    # score = evaluator.evaluate(test_image_path_list, test_label_path_list, do_tta=True, vote_mode='soft', multiscale_list=multiscale_list)
+    # print(f"Flip + Multiscale TTA soft voting: {score} (Dice score).")
     
     
-def make_prediction(image_dir, mask_mode, do_tta, do_multiscale, vote_mode):
+def make_prediction(model, image_dir, mask_mode, do_tta, do_multiscale, vote_mode, multiscale_list):
     if os.path.isdir('./predict_result'): 
         import shutil 
         shutil.rmtree('./predict_result')
         print("Delete directory: predict_result/")
     os.mkdir('./predict_result')   
     print("Create directory: predict_result/")
-        
     test_image_transform =  Test_Preprocessor(None if (do_multiscale and do_tta) else test_img_size)
     evaluator = Evaluator(model, test_image_transform, device='cuda')
-    evaluator.make_prediction(image_dir, './predict_result', mask_mode, do_tta, vote_mode)
+    evaluator.make_prediction(image_dir, './predict_result', mask_mode, do_tta, vote_mode, multiscale_list)
     
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Semantic segmentation for medical dataset!")
     parser.add_argument("--mode", type=str, default='train')
+    parser.add_argument("--model_path", type=str)
     parser.add_argument("--do_tta", type=boolean_string)
-    parser.add_argument("--do_multiscale", type=boolean_string)
+    parser.add_argument("--multiscale", type=str)
     parser.add_argument("--vote_mode", type=str)
     parser.add_argument("--target_dir", type=str)
+    parser.add_argument("--mask_mode", type=str)
     args = parser.parse_args()
 
+    # input mode
     if args.mode == "train": 
         train()
         
+    # input mode, model_path, multiscale_list
     elif args.mode == "evaluate":
         test_image_path_list = test_path_list
         test_label_path_list = [os.path.join(label_dir, "label_" + os.path.basename(image_path).split(".")[0] + ".npz") for image_path in test_image_path_list]
-        evaluate(test_image_path_list, test_label_path_list, args.do_tta, args.do_multiscale, args.vote_mode)
-            
+        
+        model = torch.load(args.model_path).to(DEVICE)
+        multiscale_list = args.multiscale.split(",") 
+        evaluate_all(model, test_image_path_list, test_label_path_list, multiscale_list)
+    
+    # input mode, model_path, target_dir, mask_mode, do_tta, vote_mode, multiscale_list
     elif args.mode == "make_prediction": 
-        make_prediction(args.target_dir, args.mask_mode, args.do_tta, args.do_multiscale, args.vote_mode)
-       
+        model = torch.load(args.model_path).to(DEVICE)
+        multiscale_list = args.multiscale.split(",")
+        make_prediction(model, args.target_dir, args.mask_mode, args.do_tta, args.vote_mode, multiscale_list)
