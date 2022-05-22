@@ -13,7 +13,7 @@ label_dir = './data/Annotations/'
 seed = 14
 
 # multiscale
-do_multiscale = True 
+do_multiscale = False
 multiscale_step = 1
 multiscale_list = [416, 320, 352, 384] 
 
@@ -35,7 +35,8 @@ num_workers = 4
 # train config 
 num_epoch = 100
 decay_fn = lambda n: 1
-is_sam = False 
+is_sam = False
+do_mixup = True
 optim_cls = optim.Adam
 optim_dict = {
     'lr': 1e-4, 

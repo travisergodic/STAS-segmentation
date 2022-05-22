@@ -14,6 +14,7 @@ from evaluate import Evaluator
 
 np.random.seed(seed)
 image_path_list = sorted(glob.glob(train_image_dir + "*" + img_suffix))
+np.random.shuffle(image_path_list)
 assert len(image_path_list) > 0
 split_index = int(len(image_path_list) * train_ratio)
 train_path_list = image_path_list[:split_index]
@@ -30,7 +31,6 @@ def boolean_string(s):
 
         
 def train(): 
-    np.random.seed(seed)
     image_path_list = sorted(glob.glob(train_image_dir + "*" + img_suffix))
     assert len(image_path_list) > 0
     
@@ -69,12 +69,12 @@ def train():
         model = torch.load(checkpoint_path).to(device)
         print(f'Load model from {checkpoint_path} successfully!')
     else:
-        model = model_cls(**model_config)
+        model = model_cls(**model_config).to(DEVICE)
     
     # train_model
     start = time.time()
     train_pipeline = Trainer()
-    train_pipeline.compile(optim_cls, decay_fn, loss_fn, metric_dict, is_sam, DEVICE, **optim_dict)
+    train_pipeline.compile(optim_cls, decay_fn, loss_fn, metric_dict, is_sam, do_mixup, DEVICE, **optim_dict)
     train_pipeline.fit(model, train_dataloader, test_dataloader, num_epoch, save_config)
     print(f"Training takes {time.time() - start} seconds!")
     

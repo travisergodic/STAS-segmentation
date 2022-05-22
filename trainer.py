@@ -8,15 +8,13 @@ class Trainer:
     def __init__(self):
         pass
 
-    def compile(self, optim_cls, decay_fn, loss_fn, metric_dict, is_sam, do_mixup, device, **kwargs): 
-        # self.train_augmentation = train_augmentation
-        # self.validation_augmentation = validation_augmentation
+    def compile(self, optim_cls, decay_fn, criterion, metric_dict, is_sam, do_mixup, device, **kwargs): 
         self.decay_fn = decay_fn 
         self.device = device
-        self.loss_fn = loss_fn
+        self.criterion = criterion
         self.metric_dict = metric_dict
         self.is_sam = is_sam
-        self.do_mixup = is_mixup
+        self.do_mixup = do_mixup
         self.optim_cls = optim_cls
         self.kwargs = kwargs  
 
@@ -37,8 +35,8 @@ class Trainer:
         best_performance, best_epoch = -100, 0
 
         for epoch in range(1, num_epoch+1):
-            print(f"Epoch {epoch}, train_loss:{self._training_step(model, train_loader, self.loss_fn)}")
-            val_loss = self._validation_step(model, validation_loader, self.loss_fn, self.metric_dict)
+            print(f"Epoch {epoch}, train_loss:{self._training_step(model, train_loader, self.criterion)}")
+            val_loss = self._validation_step(model, validation_loader, self.criterion, self.metric_dict)
 
             if epoch % save_config["freq"] == 0:
                 torch.save(model, save_config["path"])
@@ -51,7 +49,7 @@ class Trainer:
                 self.scheduler.step()
         print(f"Best loss :{-best_performance} at {epoch} epoch.")
 
-    def _training_step(self, model, train_loader, loss_fn): 
+    def _training_step(self, model, train_loader, criterion): 
         model.train()
         loop = tqdm(train_loader)
         total_loss = 0 
@@ -59,11 +57,12 @@ class Trainer:
         for batch_idx, (data, targets) in enumerate(loop):
             data = data.to(device=self.device)
             targets = targets.type(torch.float).to(device=self.device)
-         
+            
+        
             # forward
             if self.is_sam:
                 # first forward-backward pass
-                loss = loss_fn(model(data), targets)  # use this loss for any training statistics
+                loss = criterion(model(data), targets)  # use this loss for any training statistics
                 loss.backward()
                 self.optimizer.first_step(zero_grad=True)
 
@@ -71,14 +70,17 @@ class Trainer:
                 loop.set_postfix(loss=loss.item())
 
                 # second forward-backward pass
-                loss_fn(model(data), targets).backward()  # make sure to do a full forward pass
+                criterion(model(data), targets).backward()  # make sure to do a full forward pass
                 self.optimizer.second_step(zero_grad=True)
                 
-            else: 
+            else:
                 with torch.cuda.amp.autocast():
+                    data, targets_a, targets_b, lam = mixup_data(data, targets, 0.4 if self.do_mixup else 1., self.device)
                     predictions = model(data)
-                    loss = loss_fn(predictions, targets)   # .to(device=self.device)
-
+                    
+                    loss_func = mixup_criterion(targets_a, targets_b, lam)
+                    loss = loss_func(criterion, predictions)
+                    
                     # backward
                     self.optimizer.zero_grad()
                     self.scaler.scale(loss).backward()
@@ -90,7 +92,7 @@ class Trainer:
         return total_loss/len(train_loader.dataset)
 
     @torch.no_grad()
-    def _validation_step(self, model, validation_loader, loss_fn, metric_dict): 
+    def _validation_step(self, model, validation_loader, criterion, metric_dict): 
         model.eval()
         test_loss = 0
         size = 0 
@@ -105,7 +107,7 @@ class Trainer:
                 targets = targets.flatten(0, - 4)  
 
             predictions = model(data)
-            loss = loss_fn(predictions, targets)
+            loss = criterion(predictions, targets)
             test_loss += loss.item() * targets.size(0)
             size += targets.size(0)
             
