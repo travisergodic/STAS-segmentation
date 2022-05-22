@@ -59,6 +59,7 @@ def train():
         batch_sampler = None
         
     train_dataloader = DataLoader(dataset=train_dataset,
+                                  batch_size=train_batch_size,
                                   batch_sampler=batch_sampler,
                                   num_workers=num_workers)
    
