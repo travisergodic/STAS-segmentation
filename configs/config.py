@@ -35,8 +35,7 @@ num_workers = 4
 # train config 
 num_epoch = 100
 decay_fn = lambda n: 1
-is_sam = False
-do_mixup = True
+regularization_option = "normal"    # options: "sam", "mixup", "cutmix", "normal" 
 optim_cls = optim.Adam
 optim_dict = {
     'lr': 1e-4, 

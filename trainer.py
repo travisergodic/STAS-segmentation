@@ -1,33 +1,27 @@
 import torch
 from tqdm import tqdm 
 from sam.sam import SAM
-from utils import mixup_data, mixup_criterion
-
 
 class Trainer:
-    def __init__(self):
-        pass
-
-    def compile(self, optim_cls, decay_fn, criterion, metric_dict, is_sam, do_mixup, device, **kwargs): 
+    def __init__(self, optim_cls, decay_fn, criterion, metric_dict, iter_hook, device, **kwargs): 
         self.decay_fn = decay_fn 
         self.device = device
         self.criterion = criterion
         self.metric_dict = metric_dict
-        self.is_sam = is_sam
-        self.do_mixup = do_mixup
+        self.iter_hook = iter_hook
         self.optim_cls = optim_cls
-        self.kwargs = kwargs  
-
+        self.optim_cfg_dict = kwargs  
+    
     def _get_optimizer(self, model, optim_cls):
         if self.is_sam:
-            return SAM(model.parameters(), optim_cls, **self.kwargs)
+            return SAM(model.parameters(), optim_cls, **self.optim_cfg_dict)
             # return SAM(model.parameters(), torch.optim.Adam, lr=lr)   
-        return optim_cls(model.parameters(), **self.kwargs)
+        return optim_cls(model.parameters(), **self.optim_cfg_dict)
         # return torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=0.0001)
 
     def _get_scheduler(self, decay_fn):
         return torch.optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda= decay_fn)
-
+    
     def fit(self, model, train_loader, validation_loader, num_epoch, save_config, track=False):
         self.optimizer = self._get_optimizer(model, self.optim_cls)
         self.scheduler = self._get_scheduler(self.decay_fn)
@@ -58,37 +52,10 @@ class Trainer:
             data = data.to(device=self.device)
             targets = targets.type(torch.float).to(device=self.device)
             
-        
-            # forward
-            if self.is_sam:
-                # first forward-backward pass
-                loss = criterion(model(data), targets)  # use this loss for any training statistics
-                loss.backward()
-                self.optimizer.first_step(zero_grad=True)
-
-                total_loss += loss.item() * data.size(0)
-                loop.set_postfix(loss=loss.item())
-
-                # second forward-backward pass
-                criterion(model(data), targets).backward()  # make sure to do a full forward pass
-                self.optimizer.second_step(zero_grad=True)
-                
-            else:
-                with torch.cuda.amp.autocast():
-                    data, targets_a, targets_b, lam = mixup_data(data, targets, 0.4 if self.do_mixup else 1., self.device)
-                    predictions = model(data)
-                    
-                    loss_func = mixup_criterion(targets_a, targets_b, lam)
-                    loss = loss_func(criterion, predictions)
-                    
-                    # backward
-                    self.optimizer.zero_grad()
-                    self.scaler.scale(loss).backward()
-                    self.scaler.step(self.optimizer)
-                    self.scaler.update()            
-
-                    total_loss += loss.item() * data.size(0)
-                    loop.set_postfix(loss=loss.item())
+            # run an iteration
+            iter_loss = self.iter_hook.run_iter(self)
+            total_loss += iter_loss * data.size(0)
+            loop.set_postfix(loss=iter_loss)
         return total_loss/len(train_loader.dataset)
 
     @torch.no_grad()
