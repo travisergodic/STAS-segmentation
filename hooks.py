@@ -1,7 +1,15 @@
 from abc import ABC, abstractmethod
 import torch
-from utils import mixup_data, cutmix_data, mixup_criterion
+from utils import mixup_data, cutmix_data, half_cutmix_data, mixup_criterion
 
+
+__all__ = [
+    'SAM_Iter_Hook', 
+    'Mixup_Iter_Hook', 
+    'Cutmix_Iter_Hook', 
+    'Half_Cutmix_Iter_Hook', 
+    'Normal_Iter_Hook'
+]
 
 class Base_Iter_Hook(ABC): 
     @abstractmethod
@@ -52,7 +60,23 @@ class Cutmix_Iter_Hook(Base_Iter_Hook):
             trainer.scaler.step(trainer.optimizer)
             trainer.scaler.update()
         return loss.item()           
-    
+
+
+class Half_Cutmix_Iter_Hook(Base_Iter_Hook): 
+    def run_iter(self, model, data, targets, trainer, criterion):
+        with torch.cuda.amp.autocast():
+            # forward
+            data, targets = half_cutmix_data(data, targets)
+            predictions = model(data)
+            loss = criterion(predictions, targets)
+            
+            # backward
+            trainer.optimizer.zero_grad()
+            trainer.scaler.scale(loss).backward()
+            trainer.scaler.step(trainer.optimizer)
+            trainer.scaler.update()
+        return loss.item()
+
 
 class Normal_Iter_Hook(Base_Iter_Hook): 
     def run_iter(self, model, data, targets, trainer, criterion):

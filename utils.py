@@ -22,24 +22,24 @@ def mixup_data(x, y, alpha=0.4, device='cuda'):
 
 
 # cutmix
-def cutmix_data(x, y, device='cuda'):
+def cutmix_data(x, y, alpha=1., device='cuda'):
     """
     x: Batch of images. A 4-D torch.Tensor
     y: Batch of masks. A 3D torch.Tensor
     
-    alpha == 1 is equivalent to no cutmix
+    alpha == 1 => uniform distribution
     """
     indices = torch.randperm(x.size(0)).to(device)
     shuffled_x = x[indices]
     shuffled_y = y[indices]
 
-    # lam = np.random.beta(alpha, alpha)
+    lam = np.random.beta(alpha, alpha)
 
     image_h, image_w = x.shape[2:]
     cx = np.random.uniform(0, image_w)
     cy = np.random.uniform(0, image_h)
-    w = np.random.uniform(image_w/5, image_w/3)
-    h = np.random.uniform(image_h/5, image_h/3)
+    w = image_w * np.sqrt(1 - lam)
+    h = image_h * np.sqrt(1 - lam)
     
     x0 = int(np.round(max(cx - w / 2, 0)))
     x1 = int(np.round(min(cx + w / 2, image_w)))
@@ -50,6 +50,32 @@ def cutmix_data(x, y, device='cuda'):
     y[:, y0:y1, x0:x1] = shuffled_y[:, y0:y1, x0:x1]
     
     return x, y
+
+
+def half_cutmix_data(x, y, p=0.5, device='cuda'): 
+    """
+    x: Batch of images. A 4-D torch.Tensor
+    y: Batch of masks. A 3D torch.Tensor
+    """
+    if np.random.uniform() < 0.5:
+        return x, y
+    
+    indices = torch.randperm(x.size(0)).to(device)
+    shuffled_x = x[indices]
+    shuffled_y = y[indices]
+
+    image_h, image_w = x.shape[2:]
+    choice = np.random.choice(["H", "W"])
+    if choice == "H": 
+        x[:, :, :int(image_h/2), :] = shuffled_x[:, :, :int(image_h/2), :]
+        y[:, :int(image_h/2), :] = shuffled_y[:, :int(image_h/2), :]
+    else: 
+        x[:, :, :, :int(image_w/2)] = shuffled_x[:, :, :, :int(image_w/2)]
+        y[:, :, :int(image_w/2)] = shuffled_y[:, :, :int(image_w/2)]
+
+    return x, y
+
+
 
 def mixup_criterion(y_a, y_b, lam):
     return lambda criterion, pred: lam * criterion(pred, y_a) + (1 - lam) * criterion(pred, y_b)

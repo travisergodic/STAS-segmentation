@@ -10,7 +10,7 @@ from data import StasDataset, Train_Preprocessor, Test_Preprocessor
 from batch_sampler import BatchSampler,RandomSampler
 from configs.config import * 
 from evaluate import Evaluator
-from hooks import SAM_Iter_Hook, Mixup_Iter_Hook, Cutmix_Iter_Hook, Normal_Iter_Hook
+from hooks import *
 
 
 np.random.seed(seed)
@@ -102,6 +102,7 @@ def train():
         "sam": SAM_Iter_Hook, 
         "mixup": Mixup_Iter_Hook, 
         "cutmix": Cutmix_Iter_Hook, 
+        "half_cutmix": Half_Cutmix_Iter_Hook,
         "normal": Normal_Iter_Hook
     }.get(regularization_option, Normal_Iter_Hook)
     
