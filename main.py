@@ -50,6 +50,8 @@ def train():
     train_path_list = image_path_list[:split_index]
     test_path_list = image_path_list[split_index:]
     
+    print(f"Training set: {len(train_path_list)} images. \nValidation set: {len(test_path_list)} images. \n")
+    
     # preprocesor 
     train_image_transform = Train_Preprocessor(None if do_multiscale else train_img_size,
                                          h_flip_p=h_flip_p,
@@ -67,15 +69,23 @@ def train():
                                      drop_last=False,
                                      multiscale_step=multiscale_step,
                                      img_sizes=multiscale_list)
+        shuffle = False
     else: 
         batch_sampler = None
+        shuffle = True
         
-    train_dataloader = DataLoader(dataset=train_dataset,
-                                  batch_size=train_batch_size,
-                                  batch_sampler=batch_sampler,
-                                  num_workers=num_workers)
+    train_dataloader = DataLoader(
+        dataset=train_dataset,
+        batch_size=train_batch_size,
+        batch_sampler=batch_sampler,
+        num_workers=num_workers,
+        shuffle=shuffle
+    )
    
-    test_dataloader = DataLoader(test_dataset, batch_size=test_batch_size, num_workers=num_workers)
+    test_dataloader = DataLoader(
+        test_dataset, 
+        batch_size=test_batch_size, 
+        num_workers=num_workers)
 
     # create model
     if checkpoint_path is not None: 
@@ -95,7 +105,7 @@ def train():
         "normal": Normal_Iter_Hook
     }.get(regularization_option, Normal_Iter_Hook)
     
-    print(f"Use iter hook of type {iter_hook_cls.__name__} during training!")
+    print(f"Use iter hook of type <class {iter_hook_cls.__name__}> during training!")
     train_pipeline = Trainer(optim_cls, decay_fn, loss_fn, metric_dict, iter_hook_cls(), DEVICE, **optim_dict)
     train_pipeline.fit(model, train_dataloader, test_dataloader, num_epoch, save_config)
     print(f"Training takes {time.time() - start} seconds!")
@@ -111,10 +121,12 @@ def evaluate_all(model, test_image_path_list, test_label_path_list, multiscale_l
     evaluator = Evaluator(model, test_image_transform, device='cuda')
     score = evaluator.evaluate(test_image_path_list, test_label_path_list, do_tta=True, multiscale_list=None)
     print(f"Only Flip TTA soft voting: {score} (Dice score).")
-    # flip + multiscale 
-    test_image_transform =  Test_Preprocessor(None)
-    score = evaluator.evaluate(test_image_path_list, test_label_path_list, do_tta=True, multiscale_list=multiscale_list)
-    print(f"Flip + Multiscale TTA soft voting: {score} (Dice score).")
+    # flip + multiscale
+    
+    if multiscale_list is not None:
+        test_image_transform =  Test_Preprocessor(None)
+        score = evaluator.evaluate(test_image_path_list, test_label_path_list, do_tta=True, multiscale_list=multiscale_list)
+        print(f"Flip + Multiscale TTA soft voting: {score} (Dice score).")
     
     
 def make_prediction(model, image_dir, mask_mode, do_tta, multiscale_list):
