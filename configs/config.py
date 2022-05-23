@@ -28,8 +28,8 @@ affine_p=0.
 
 # dataloader
 train_ratio = 0.85
-train_batch_size = 12
-test_batch_size = 24
+train_batch_size = 5
+test_batch_size = 10
 num_workers = 4
 
 # train config 

@@ -13,7 +13,7 @@ class Trainer:
         self.optim_cfg_dict = kwargs  
     
     def _get_optimizer(self, model, optim_cls):
-        if self.is_sam:
+        if type(self.iter_hook).__name__[:3] == "SAM": 
             return SAM(model.parameters(), optim_cls, **self.optim_cfg_dict)
             # return SAM(model.parameters(), torch.optim.Adam, lr=lr)   
         return optim_cls(model.parameters(), **self.optim_cfg_dict)
@@ -52,8 +52,8 @@ class Trainer:
             data = data.to(device=self.device)
             targets = targets.type(torch.float).to(device=self.device)
             
-            # run an iteration
-            iter_loss = self.iter_hook.run_iter(self)
+            # run iter 
+            iter_loss = self.iter_hook.run_iter(model, data, targets, self, criterion)
             total_loss += iter_loss * data.size(0)
             loop.set_postfix(loss=iter_loss)
         return total_loss/len(train_loader.dataset)

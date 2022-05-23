@@ -96,7 +96,7 @@ def train():
     }.get(regularization_option, Normal_Iter_Hook)
     
     print(f"Use iter hook of type {iter_hook_cls.__name__} during training!")
-    train_pipeline = Trainer(optim_cls, decay_fn, criterion, metric_dict, iter_hook, DEVICE, **optim_dict)
+    train_pipeline = Trainer(optim_cls, decay_fn, loss_fn, metric_dict, iter_hook_cls(), DEVICE, **optim_dict)
     train_pipeline.fit(model, train_dataloader, test_dataloader, num_epoch, save_config)
     print(f"Training takes {time.time() - start} seconds!")
     

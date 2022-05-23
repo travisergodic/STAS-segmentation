@@ -33,7 +33,7 @@ class Mixup_Iter_Hook(Base_Iter_Hook):
             # backward
             trainer.optimizer.zero_grad()
             trainer.scaler.scale(loss).backward()
-            trainer.scaler.step(self.optimizer)
+            trainer.scaler.step(trainer.optimizer)
             trainer.scaler.update()
         return loss.item() 
      
@@ -49,7 +49,7 @@ class Cutmix_Iter_Hook(Base_Iter_Hook):
             # backward
             trainer.optimizer.zero_grad()
             trainer.scaler.scale(loss).backward()
-            trainer.scaler.step(self.optimizer)
+            trainer.scaler.step(trainer.optimizer)
             trainer.scaler.update()
         return loss.item()           
     
@@ -63,6 +63,6 @@ class Normal_Iter_Hook(Base_Iter_Hook):
             # backward
             trainer.optimizer.zero_grad()
             trainer.scaler.scale(loss).backward()
-            trainer.scaler.step(self.optimizer)
+            trainer.scaler.step(trainer.optimizer)
             trainer.scaler.update()
         return loss.item()
