@@ -34,18 +34,32 @@ def decode_multiscale(multiscale):
      
         
 def train(): 
-    np.random.seed(seed)
-    image_path_list = sorted(glob.glob(train_image_dir + "*" + img_suffix))
-    np.random.shuffle(image_path_list)
-    assert len(image_path_list) > 0
-    split_index = int(len(image_path_list) * train_ratio)
-    train_path_list = image_path_list[:split_index]
-    test_path_list = image_path_list[split_index:]
-  
-    with open("./val.txt", "w") as f: 
-        res = "\n".join([os.path.basename(test_path) for test_path in test_path_list])
-        f.write(res)
-        print("Create 'val.txt' file successfully!")
+    # do train test split & create val.txt file
+    if not os.path.isfile("./val.txt"):         
+        np.random.seed(seed)
+        image_path_list = sorted(glob.glob(train_image_dir + "*" + img_suffix))
+        np.random.shuffle(image_path_list)
+        assert len(image_path_list) > 0
+        split_index = int(len(image_path_list) * train_ratio)
+        train_path_list = image_path_list[:split_index]
+        test_path_list = image_path_list[split_index:]
+
+        with open("./val.txt", "w") as f: 
+            res = "\n".join([os.path.basename(test_path) for test_path in test_path_list])
+            f.write(res)
+            print("Create 'val.txt' file successfully!")
+            
+    # read val.txt file & create corresponding trainig and validation set 
+    else: 
+        print("'val.txt' file already exists!")
+        with open("./val.txt", "r") as f: 
+            image_path_list = [os.path.normpath(path) for path in glob.glob(train_image_dir + "*" + img_suffix)]
+            assert len(image_path_list) > 0
+            test_path_list = [os.path.normpath(os.path.join(train_image_dir, line.strip())) for line in f.readlines()]
+            train_path_list = [image_path for image_path in image_path_list if image_path not in test_path_list]
+        print("Read 'val.txt' file successfully!")
+            
+    
     print(f"Training set: {len(train_path_list)} images. \nValidation set: {len(test_path_list)} images. \n")
     
     # preprocesor 
@@ -109,34 +123,27 @@ def train():
     print(f"Training takes {time.time() - start} seconds!")
     
     
-def evaluate_all(model, test_image_path_list, test_label_path_list, multiscale_list):
+def evaluate_all(model, test_image_path_list, test_label_path_list):
     test_image_transform =  Test_Preprocessor(test_img_size)
-    evaluator = Evaluator(model, test_image_transform, device='cuda')
-    # no aug
-    score = evaluator.evaluate(test_image_path_list, test_label_path_list, do_tta=False)
+    evaluator = Evaluator(model, test_image_transform, device='cuda', activation=activation)
+    # normal
+    score = evaluator.evaluate(test_image_path_list, test_label_path_list, False)
     print(f"No TTA: {score} (Dice score).")
-    # only flip 
-    evaluator = Evaluator(model, test_image_transform, device='cuda')
-    score = evaluator.evaluate(test_image_path_list, test_label_path_list, do_tta=True, multiscale_list=None)
-    print(f"Only Flip TTA soft voting: {score} (Dice score).")
-    # flip + multiscale
-    
-    if multiscale_list is not None:
-        test_image_transform =  Test_Preprocessor(None)
-        score = evaluator.evaluate(test_image_path_list, test_label_path_list, do_tta=True, multiscale_list=multiscale_list)
-        print(f"Flip + Multiscale TTA soft voting: {score} (Dice score).")
+    # tta
+    score = evaluator.evaluate(test_image_path_list, test_label_path_list, tta_fn)
+    print(f"With TTA: {score} (Dice score).")    
     
     
-def make_prediction(model, image_dir, mask_mode, do_tta, multiscale_list):
+def make_prediction(model, image_dir, do_tta, mask_mode):
     if os.path.isdir('./predict_result'): 
         import shutil 
         shutil.rmtree('./predict_result')
         print("Delete directory: predict_result/")
     os.mkdir('./predict_result')   
     print("Create directory: predict_result/")
-    test_image_transform =  Test_Preprocessor(None if (multiscale_list is not None and do_tta) else test_img_size)
-    evaluator = Evaluator(model, test_image_transform, device='cuda')
-    evaluator.make_prediction(image_dir, './predict_result', mask_mode, do_tta, multiscale_list)
+    test_image_transform =  Test_Preprocessor(test_img_size)
+    evaluator = Evaluator(model, test_image_transform, device='cuda', activation=activation)
+    evaluator.make_prediction(image_dir, './predict_result', tta_fn if do_tta else False, mask_mode)
     
     
 if __name__ == "__main__":
@@ -144,7 +151,6 @@ if __name__ == "__main__":
     parser.add_argument("--mode", type=check_mode, default='train')
     parser.add_argument("--model_path", type=str)
     parser.add_argument("--do_tta", type=boolean_string)
-    parser.add_argument("--multiscale", type=decode_multiscale, default=None)
     parser.add_argument("--target_dir", type=str)
     parser.add_argument("--mask_mode", type=str)
     args = parser.parse_args()
@@ -152,18 +158,32 @@ if __name__ == "__main__":
     # input mode
     if args.mode == "train": 
         train()
-        
-    # input mode, model_path, multiscale_list
+    
+    # input mode, model_path
     elif args.mode == "evaluate":
+        # read val.txt file
         with open("./val.txt", "r") as f: 
-            test_image_path_list = [os.path.join(train_image_dir, line.strip()) for line in f.readlines()]
-            test_label_path_list = [os.path.join(label_dir, "label_" + os.path.basename(image_path).split(".")[0] + ".npz") for image_path in test_image_path_list]
+            test_image_path_list = [
+                os.path.join(train_image_dir, line.strip()) for line in f.readlines()
+            ]
+            
+            test_label_path_list = [
+                os.path.join(
+                    label_dir, 
+                    "label_" + os.path.basename(image_path).split(".")[0] + ".npz"
+                ) for image_path in test_image_path_list
+            ]
+            
             print(f"Read 'val.txt' file successfully! {len(test_image_path_list)} evaluation images!")
         
+        # build model
         model = torch.load(args.model_path).to(DEVICE)
-        evaluate_all(model, test_image_path_list, test_label_path_list, args.multiscale)
+        # evaluate
+        evaluate_all(model, test_image_path_list, test_label_path_list)
     
     # input mode, model_path, target_dir, mask_mode, do_tta, vote_mode, multiscale_list
     elif args.mode == "make_prediction": 
+        # build model
         model = torch.load(args.model_path).to(DEVICE)
-        make_prediction(model, args.target_dir, args.mask_mode, args.do_tta, args.multiscale)
+        # evaluate
+        make_prediction(model, args.target_dir, args.do_tta, args.mask_mode)

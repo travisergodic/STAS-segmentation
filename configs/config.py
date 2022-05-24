@@ -1,8 +1,10 @@
 import torch
+import torch.nn as nn
 from torch import optim
 import segmentation_models_pytorch as smp
 from vision_transformer import SwinUnet
 from transformers import MaskFormerModel
+import ttach as tta
 
 # device 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -64,6 +66,11 @@ save_config = {
     "best_path": './models/model_v2_best.pt',
     "freq": 5
 }
+
+
+## eval
+tta_fn = tta.aliases.d4_transform()
+activation = nn.Sigmoid()
 
 ## loss function 
 class MixLoss:
