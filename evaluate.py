@@ -1,6 +1,7 @@
 import cv2
 import os 
 import torch 
+import torch.nn as nn
 from torchvision.transforms import Resize, InterpolationMode, Compose
 from torchvision.transforms.functional import hflip, vflip
 from data import Test_Preprocessor
@@ -9,13 +10,15 @@ from tqdm import tqdm
 from PIL import Image
 import glob
 import numpy as np
+import ttach as tta
 
 
 class Evaluator:
-    def __init__(self, model, image_transform, device='cuda'):
+    def __init__(self, model, image_transform, device='cuda', activation=nn.Sigmoid()):
         self.model = model.to(device)
         self.image_transform = image_transform
         self.device = device
+        self.activation = nn.Identity() if activation is None else activation
     
     @torch.no_grad()
     def _predict(self, path, mask_mode='color', do_tta=True, multiscale_list=None):         
@@ -24,16 +27,17 @@ class Evaluator:
         # do test time augmentation
         if do_tta:
             # only do four flips 
-            if multiscale_list is None: 
+            if multiscale_list is None:
                 X, tta_fns = self._forward_TTA(x, None)
-                mask = self._backward_TTA(self.model(X), tta_fns).mean(dim=0).squeeze() > 0.5
+                mask = self._backward_TTA(self.activation(self.model(X)), tta_fns).mean(dim=0).squeeze() > 0.5
+                
             # do four flips + multiscale testing 
             else: 
                 origin_size = x.size()[1:] 
                 X_dict, tta_fns = self._forward_TTA(x, multiscale_list)
                 mask = torch.zeros(*origin_size).to(self.device)
                 for key in X_dict: 
-                    mask += Resize(origin_size, interpolation=InterpolationMode.NEAREST)(self._backward_TTA(self.model(X_dict[key]), tta_fns).mean(dim=0)).squeeze()
+                    mask += Resize(origin_size, interpolation=InterpolationMode.NEAREST)(self._backward_TTA(self.activation(self.model(X_dict[key])), tta_fns).mean(dim=0)).squeeze()
                 mask = mask/len(X_dict) > 0.5 
                 
         # no test time augmentation
