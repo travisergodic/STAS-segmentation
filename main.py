@@ -13,15 +13,6 @@ from evaluate import Evaluator
 from hooks import *
 
 
-np.random.seed(seed)
-image_path_list = sorted(glob.glob(train_image_dir + "*" + img_suffix))
-np.random.shuffle(image_path_list)
-assert len(image_path_list) > 0
-split_index = int(len(image_path_list) * train_ratio)
-train_path_list = image_path_list[:split_index]
-test_path_list = image_path_list[split_index:]
-
-
 def boolean_string(s):
     if s == 'False': 
         return False
@@ -43,13 +34,18 @@ def decode_multiscale(multiscale):
      
         
 def train(): 
+    np.random.seed(seed)
     image_path_list = sorted(glob.glob(train_image_dir + "*" + img_suffix))
+    np.random.shuffle(image_path_list)
     assert len(image_path_list) > 0
-    
     split_index = int(len(image_path_list) * train_ratio)
     train_path_list = image_path_list[:split_index]
     test_path_list = image_path_list[split_index:]
-    
+  
+    with open("./val.txt", "w") as f: 
+        res = "\n".join([os.path.basename(test_path) for test_path in test_path_list])
+        f.write(res)
+        print("Create 'val.txt' file successfully!")
     print(f"Training set: {len(train_path_list)} images. \nValidation set: {len(test_path_list)} images. \n")
     
     # preprocesor 
@@ -89,7 +85,7 @@ def train():
 
     # create model
     if checkpoint_path is not None: 
-        model = torch.load(checkpoint_path).to(device)
+        model = torch.load(checkpoint_path).to(DEVICE)
         print(f'Load model from {checkpoint_path} successfully!')
     else:
         model = model_cls(**model_config).to(DEVICE)
@@ -158,13 +154,15 @@ if __name__ == "__main__":
         
     # input mode, model_path, multiscale_list
     elif args.mode == "evaluate":
-        test_image_path_list = test_path_list
-        test_label_path_list = [os.path.join(label_dir, "label_" + os.path.basename(image_path).split(".")[0] + ".npz") for image_path in test_image_path_list]
+        with open("./val.txt", "r") as f: 
+            test_image_path_list = [os.path.join(train_image_dir, line.strip()) for line in f.readlines()]
+            test_label_path_list = [os.path.join(label_dir, "label_" + os.path.basename(image_path).split(".")[0] + ".npz") for image_path in test_image_path_list]
+            print(f"Read 'val.txt' file successfully! {len(test_image_path_list)} evaluation images!")
         
         model = torch.load(args.model_path).to(DEVICE)
-        evaluate_all(model, test_image_path_list, test_label_path_list, args.multiscale_list)
+        evaluate_all(model, test_image_path_list, test_label_path_list, args.multiscale)
     
     # input mode, model_path, target_dir, mask_mode, do_tta, vote_mode, multiscale_list
     elif args.mode == "make_prediction": 
         model = torch.load(args.model_path).to(DEVICE)
-        make_prediction(model, args.target_dir, args.mask_mode, args.do_tta, args.multiscale_list)
+        make_prediction(model, args.target_dir, args.mask_mode, args.do_tta, args.multiscale)
