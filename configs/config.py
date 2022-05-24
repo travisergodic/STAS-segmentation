@@ -5,6 +5,7 @@ import segmentation_models_pytorch as smp
 from vision_transformer import SwinUnet
 from transformers import MaskFormerModel
 import ttach as tta
+import hrnet
 
 # device 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -46,13 +47,23 @@ optim_dict = {
 
 ## model 
 checkpoint_path = None
-model_cls = smp.Unet
+# model_cls = smp.Unet
+
+model_cls = hrnet.hrnet
+# model_config = {
+#     'encoder_name': 'tu-tf_efficientnetv2_l_in21k',
+#     'encoder_weights': 'imagenet',
+#     'in_channels': 3,
+#     'classes': 1,
+#     # 'decoder_attention_type'='scse'
+# }
+
 model_config = {
-    'encoder_name': 'tu-tf_efficientnetv2_l_in21k',
-    'encoder_weights': 'imagenet',
-    'in_channels': 3,
-    'classes': 1,
-    # 'decoder_attention_type'='scse'
+    'arch': 'hrnet48_cityscapes',
+    'pretrained': True,
+    'progress': True, 
+    'num_classes': 1,
+    'out_size': (384, 384)
 }
 
 # 384, 480
