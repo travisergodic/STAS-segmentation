@@ -1,5 +1,4 @@
 from configparser import Interpolation
-from functools import partial
 import numpy as np
 import os
 import logging
@@ -7,6 +6,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.hub import load_state_dict_from_url
+from torchvision import transforms
+from torchvision.transforms.functional import InterpolationMode
 
 ALIGN_CORNERS=False
 
@@ -509,9 +510,9 @@ def hrnet(arch, pretrained, progress, num_classes=1, out_size=(384, 384)):
         state_dict = load_state_dict_from_url(model_url,
                                               progress=progress)
         model.load_state_dict(state_dict, strict=False)
-        last_channel = model.last_layer.__dict__['in_channels']
+        last_channel = model.last_layer[-1].__dict__['in_channels']
         model.last_layer[-1] = nn.Conv2d(last_channel, 1, kernel_size=(1, 1), stride=(1, 1))
     return nn.Sequential(
         model,
-        partial(F.interpolate,  size=out_size, mode='nearest', align_corners=False)
+        transforms.Resize(out_size, interpolation=InterpolationMode.NEAREST)
     )
