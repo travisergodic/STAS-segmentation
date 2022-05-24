@@ -99,6 +99,7 @@ def train():
         "mixup": Mixup_Iter_Hook, 
         "cutmix": Cutmix_Iter_Hook, 
         "half_cutmix": Half_Cutmix_Iter_Hook,
+        "cutout": Cutout_Iter_Hook,
         "normal": Normal_Iter_Hook
     }.get(regularization_option, Normal_Iter_Hook)
     

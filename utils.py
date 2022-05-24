@@ -76,6 +76,5 @@ def half_cutmix_data(x, y, p=0.5, device='cuda'):
     return x, y
 
 
-
 def mixup_criterion(y_a, y_b, lam):
     return lambda criterion, pred: lam * criterion(pred, y_a) + (1 - lam) * criterion(pred, y_b)

@@ -35,7 +35,7 @@ num_workers = 4
 # train config 
 num_epoch = 100
 decay_fn = lambda n: 1
-regularization_option = "half_cutmix"    # options: "sam", "mixup", "cutmix", "normal", "half_cutmix" 
+regularization_option = "cutout"    # options: "sam", "mixup", "cutmix", "normal", "half_cutmix" 
 optim_cls = optim.Adam
 optim_dict = {
     'lr': 1e-4, 

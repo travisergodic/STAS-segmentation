@@ -61,8 +61,10 @@ class Train_Preprocessor(nn.Module):
             self.resize = nn.Identity()
         self.jitter = transforms.ColorJitter(0.25, 0.25, 0.25)
         self.blur = transforms.GaussianBlur((1, 3))
+        
         self.h_flip_p = h_flip_p
         self.v_flip_p = v_flip_p
+        
         self.preprocess = transforms.Compose(
             [
               transforms.ToTensor(),
@@ -90,21 +92,6 @@ class Train_Preprocessor(nn.Module):
         if random.random() < self.v_flip_p:
             img = F.vflip(img)
             label = F.vflip(label)       
-            
-        # random affine
-        # if random.random() < self.affine_p: 
-        #     affine_param = transforms.RandomAffine.get_params(
-        #         degrees = [-10, 10], translate = [0.1,0.1],  
-        #         img_size = [512, 512], scale_ranges = [1, 1.3], 
-        #         shears = [2,2])
-
-        #     img = F.affine(img, 
-        #                    affine_param[0], affine_param[1],
-        #                    affine_param[2], affine_param[3])
-
-        #     label = F.affine(label, 
-        #                      affine_param[0], affine_param[1],
-        #                      affine_param[2], affine_param[3])
 
         # random_resize_param = transforms.RandomResizedCrop.get_params(
         #     img,
