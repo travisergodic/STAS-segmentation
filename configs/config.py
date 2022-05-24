@@ -66,6 +66,18 @@ save_config = {
 }
 
 ## loss function 
+class MixLoss:
+    def __init__(self): 
+        self.focal_loss = smp.utils.losses.FocalLoss(mode='binary', alpha=0.25, gamma=2)
+        self.dice_loss =  smp.utils.losses.DiceLoss(activation='sigmoid')
+        
+    def __call__(self, pred, targets): 
+        return self.focal_loss(pred, targets) + self.dice_loss(pred, targets)
+    
+
+
+
+# smp.utils.losses.FocalLoss(mode='binary', alpha=0.25, gamma=2)
 loss_fn = smp.utils.losses.DiceLoss(activation='sigmoid')
 
 # lm.GDiceLossV2(nn.Softmax(dim=1), do_bg=False, smooth=1e-5)
