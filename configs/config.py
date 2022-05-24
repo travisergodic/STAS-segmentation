@@ -11,8 +11,8 @@ import hrnet
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # config
-train_image_dir = './data/Train_Images/'
-label_dir = './data/Annotations/'
+train_image_dir = '/content/STAS-segmentation/Train_Images/'
+label_dir = '/content/STAS-segmentation/Annotations/'
 seed = 14
 
 # multiscale
@@ -23,26 +23,26 @@ multiscale_list = [416, 320, 352, 384]
 # preprocess
 ann_suffix = '.npz'
 img_suffix = '.jpg'
-train_img_size = (384, 384)
-test_img_size = (384, 384)
+train_img_size = (512, 512)
+test_img_size = (512, 512)
 h_flip_p=0.5
 v_flip_p=0.5
 affine_p=0.
 
 # dataloader
 train_ratio = 0.85
-train_batch_size = 5
-test_batch_size = 10
-num_workers = 4
+train_batch_size = 8
+test_batch_size = 16
+num_workers = 2
 
 # train config 
 num_epoch = 100
 decay_fn = lambda n: 1
-regularization_option = "cutout"    # options: "sam", "mixup", "cutmix", "normal", "half_cutmix" 
-optim_cls = optim.Adam
+regularization_option = "normal"    # options: "sam", "mixup", "cutmix", "normal", "half_cutmix" 
+optim_cls = optim.AdamW
 optim_dict = {
-    'lr': 1e-4, 
-    # 'weight_decay': 1e-2
+    'lr': 2e-5, 
+    'weight_decay': 1e-2
 }
 
 ## model 
@@ -59,11 +59,11 @@ model_cls = hrnet.hrnet
 # }
 
 model_config = {
-    'arch': 'hrnet48_cityscapes',
+    'arch': 'hrnet48_ocr_cityscapes',
     'pretrained': True,
     'progress': True, 
     'num_classes': 1,
-    'out_size': (384, 384)
+    'out_size': train_img_size
 }
 
 # 384, 480
