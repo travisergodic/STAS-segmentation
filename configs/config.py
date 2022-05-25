@@ -6,6 +6,7 @@ from vision_transformer import SwinUnet
 from transformers import MaskFormerModel
 import ttach as tta
 import hrnet
+import segformer
 
 # device 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -23,8 +24,8 @@ multiscale_list = [416, 320, 352, 384]
 # preprocess
 ann_suffix = '.npz'
 img_suffix = '.jpg'
-train_img_size = (512, 512)
-test_img_size = (512, 512)
+train_img_size = (448, 448)
+test_img_size = (448, 448)
 h_flip_p=0.5
 v_flip_p=0.5
 affine_p=0.
@@ -39,17 +40,17 @@ num_workers = 2
 num_epoch = 100
 decay_fn = lambda n: 1
 regularization_option = "normal"    # options: "sam", "mixup", "cutmix", "normal", "half_cutmix" 
-optim_cls = optim.AdamW
+optim_cls = optim.Adam
 optim_dict = {
-    'lr': 2e-5, 
-    'weight_decay': 1e-2
+    'lr': 1e-4, 
+    # 'weight_decay': 1e-2
 }
 
 ## model 
 checkpoint_path = None
 # model_cls = smp.Unet
 
-model_cls = hrnet.build_hrnet
+# model_cls = hrnet.build_hrnet
 # model_config = {
 #     'encoder_name': 'tu-tf_efficientnetv2_l_in21k',
 #     'encoder_weights': 'imagenet',
@@ -58,12 +59,20 @@ model_cls = hrnet.build_hrnet
 #     # 'decoder_attention_type'='scse'
 # }
 
+model_cls = segformer.build_segformer
+
+# model_config = {
+#     'arch': 'hrnet48_ocr_cityscapes',
+#     'pretrained': True,
+#     'progress': True, 
+#     'num_classes': 1,
+#     'out_size': train_img_size
+# }
+
 model_config = {
-    'arch': 'hrnet48_ocr_cityscapes',
+    'backbone': 'MiT-B2',
     'pretrained': True,
-    'progress': True, 
-    'num_classes': 1,
-    'out_size': train_img_size
+    'num_classes': 1
 }
 
 # 384, 480
