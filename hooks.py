@@ -39,7 +39,7 @@ class Mixup_Iter_Hook(Base_Iter_Hook):
             # forward
             mixed_data, targets_a, targets_b, lam = mixup_data(data, targets)
             predictions = model(mixed_data)
-            loss = mixup_criterion(y_a, y_b, lam)(criterion, predictions)
+            loss = mixup_criterion(targets_a, targets_b, lam)(criterion, predictions)
      
             # backward
             trainer.optimizer.zero_grad()
