@@ -499,11 +499,8 @@ class HighResolutionNet(nn.Module):
         return x
 
 
-def hrnet(arch, pretrained, progress, num_classes=1, out_size=(384, 384)):
-    try:
-        from hrnet_config import MODEL_CONFIGS
-    except ImportError:
-        from hrnet_config import MODEL_CONFIGS
+def build_hrnet(arch, pretrained, progress, num_classes=1, out_size=(384, 384)):
+    from hrnet_config import MODEL_CONFIGS
     model = HighResolutionNet(MODEL_CONFIGS[arch[:7]])
     if pretrained:
         model_url = model_urls[arch]
@@ -511,7 +508,7 @@ def hrnet(arch, pretrained, progress, num_classes=1, out_size=(384, 384)):
                                               progress=progress)
         model.load_state_dict(state_dict, strict=False)
         last_channel = model.last_layer[-1].__dict__['in_channels']
-        model.last_layer[-1] = nn.Conv2d(last_channel, 1, kernel_size=(1, 1), stride=(1, 1))
+        model.last_layer[-1] = nn.Conv2d(last_channel, num_classes, kernel_size=(1, 1), stride=(1, 1))
     return nn.Sequential(
         model,
         transforms.Resize(out_size, interpolation=InterpolationMode.NEAREST)

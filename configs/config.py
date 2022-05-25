@@ -49,7 +49,7 @@ optim_dict = {
 checkpoint_path = None
 # model_cls = smp.Unet
 
-model_cls = hrnet.hrnet
+model_cls = hrnet.build_hrnet
 # model_config = {
 #     'encoder_name': 'tu-tf_efficientnetv2_l_in21k',
 #     'encoder_weights': 'imagenet',
