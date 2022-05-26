@@ -21,7 +21,12 @@ def build_transunet(name, img_size, num_classes, pretrained=True):
     if pretrained:
         import wget
         url_dict = {
-            "R50-ViT-B_16": "https://storage.googleapis.com/vit_models/imagenet21k/R50+ViT-B_16.npz"
+            "R50-ViT-B_16": "https://storage.googleapis.com/vit_models/imagenet21k/R50+ViT-B_16.npz",
+            "ViT-B_16": "https://storage.googleapis.com/vit_models/imagenet21k/ViT-B_16.npz",
+            "ViT-B_32": "https://storage.googleapis.com/vit_models/imagenet21k/ViT-B_32.npz", 
+            "ViT-L_16": "https://storage.googleapis.com/vit_models/imagenet21k/ViT-L_16.npz",
+            "ViT-L_32": "https://storage.googleapis.com/vit_models/imagenet21k/ViT-L_32.npz",
+            "R50-ViT-L_16": "https://storage.googleapis.com/vit_models/imagenet21k/R50+ViT-L_16.npz"
         }
         url = url_dict.get(name, False)
         assert url 
