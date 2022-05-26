@@ -7,6 +7,7 @@ from transformers import MaskFormerModel
 import ttach as tta
 import hrnet
 import segformer
+import transunet
 
 # device 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -24,30 +25,38 @@ multiscale_list = [416, 320, 352, 384]
 # preprocess
 ann_suffix = '.npz'
 img_suffix = '.jpg'
-train_img_size = (448, 448)
-test_img_size = (448, 448)
+train_img_size = (384, 384)
+test_img_size = (384, 384)
 h_flip_p=0.5
 v_flip_p=0.5
 affine_p=0.
 
 # dataloader
 train_ratio = 0.85
-train_batch_size = 8
-test_batch_size = 16
+train_batch_size = 7
+test_batch_size = 14
 num_workers = 2
 
 # train config 
 num_epoch = 100
 decay_fn = lambda n: 1
-regularization_option = "normal"    # options: "sam", "mixup", "cutmix", "normal", "half_cutmix" 
-optim_cls = optim.Adam
+regularization_option = "sam"    # options: "sam", "mixup", "cutmix", "normal", "half_cutmix" 
+optim_cls = optim.AdamW
+# optim_dict = {
+#     'lr': 1e-4, 
+#     # 'weight_decay': 1e-2
+# }
+
 optim_dict = {
-    'lr': 1e-4, 
-    # 'weight_decay': 1e-2
+    'lr': 5e-6, 
+    'weight_decay': 3e-3
 }
 
+
+
+
 ## model 
-checkpoint_path = None
+checkpoint_path = "/content/STAS-segmentation/models/model_v2.pt"
 # model_cls = smp.Unet
 
 # model_cls = hrnet.build_hrnet
@@ -59,7 +68,16 @@ checkpoint_path = None
 #     # 'decoder_attention_type'='scse'
 # }
 
-model_cls = segformer.build_segformer
+# model_cls = segformer.build_segformer
+model_cls = transunet.build_transunet
+
+model_config = {
+    "name": "R50-ViT-B_16", 
+    "img_size": 384,
+    "num_classes": 1, 
+    "pretrained": True
+}
+
 
 # model_config = {
 #     'arch': 'hrnet48_ocr_cityscapes',
@@ -69,11 +87,11 @@ model_cls = segformer.build_segformer
 #     'out_size': train_img_size
 # }
 
-model_config = {
-    'backbone': 'MiT-B2',
-    'pretrained': True,
-    'num_classes': 1
-}
+# model_config = {
+#     'backbone': 'MiT-B2',
+#     'pretrained': True,
+#     'num_classes': 1
+# }
 
 # 384, 480
 # tu-tf_efficientnetv2_l_in21k
