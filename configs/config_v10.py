@@ -3,7 +3,6 @@ import torch.nn as nn
 from torch import optim
 import segmentation_models_pytorch as smp
 from vision_transformer import SwinUnet
-from transformers import MaskFormerModel
 import ttach as tta
 import hrnet
 import segformer
@@ -41,62 +40,37 @@ num_workers = 2
 num_epoch = 100
 decay_fn = lambda n: 1
 regularization_option = "sam"    # options: "sam", "mixup", "cutmix", "normal", "half_cutmix" 
-optim_cls = optim.AdamW
-# optim_dict = {
-#     'lr': 1e-4, 
-#     # 'weight_decay': 1e-2
-# }
-
 optim_dict = {
+    'optim_cls': optim.AdamW, 
     'lr': 5e-6, 
     'weight_decay': 3e-3
 }
 
-
-
-
 ## model 
-checkpoint_path = "/content/STAS-segmentation/models/model_v2.pt"
-# model_cls = smp.Unet
-
-# model_cls = hrnet.build_hrnet
-# model_config = {
-#     'encoder_name': 'tu-tf_efficientnetv2_l_in21k',
-#     'encoder_weights': 'imagenet',
-#     'in_channels': 3,
-#     'classes': 1,
-#     # 'decoder_attention_type'='scse'
-# }
-
-# model_cls = segformer.build_segformer
-model_cls = transunet.build_transunet
-
-model_config = {
+checkpoint_path = None
+model_dict = {
+    "model_cls": transunet.build_transunet, 
     "name": "R50-ViT-B_16", 
     "img_size": 384,
     "num_classes": 1, 
     "pretrained": True
 }
 
-
 # model_config = {
-#     'arch': 'hrnet48_ocr_cityscapes',
-#     'pretrained': True,
-#     'progress': True, 
-#     'num_classes': 1,
-#     'out_size': train_img_size
-# }
-
-# model_config = {
+#     'model_cls': segformer.build_segformer,
 #     'backbone': 'MiT-B2',
 #     'pretrained': True,
 #     'num_classes': 1
 # }
 
-# 384, 480
-# tu-tf_efficientnetv2_l_in21k
-# model = MaskFormerModel.from_pretrained("facebook/maskformer-swin-base-ade")
-# model = SwinUnet().to(DEVICE)
+# model_dict = {
+#     'model_cls': smp.Unet,
+#     'encoder_name': 'tu-tf_efficientnetv2_l_in21k',
+#     'encoder_weights': 'imagenet',
+#     'in_channels': 3,
+#     'classes': 1
+# }
+
 
 ## save
 save_config = {
@@ -104,11 +78,6 @@ save_config = {
     "best_path": './models/model_v2_best.pt',
     "freq": 5
 }
-
-
-## eval
-tta_fn = tta.aliases.d4_transform()
-activation = nn.Sigmoid()
 
 ## loss function 
 class MixLoss:
@@ -118,8 +87,6 @@ class MixLoss:
         
     def __call__(self, pred, targets): 
         return self.focal_loss(pred, targets) + self.dice_loss(pred, targets)
-    
-
 
 
 # smp.utils.losses.FocalLoss(mode='binary', alpha=0.25, gamma=2)
