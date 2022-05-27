@@ -16,10 +16,8 @@ class Trainer:
         optim_config = {k: self.optim_dict[k] for k in self.optim_dict if k != 'optim_cls'}
         if type(self.iter_hook).__name__[:3] == "SAM": 
             return SAM(model.parameters(), optim_cls, **optim_config)
-            # return SAM(model.parameters(), torch.optim.Adam, lr=lr)   
         return optim_cls(model.parameters(), **optim_config)
-        # return torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=0.0001)
-
+        
     def _get_scheduler(self):
         return torch.optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda= self.decay_fn)
     
@@ -30,7 +28,7 @@ class Trainer:
         best_performance, best_epoch = -100, 0
 
         for epoch in range(1, num_epoch+1):
-            print(f"Epoch {epoch}, train_loss:{self._training_step(model, train_loader, self.criterion)}")
+            print(f"Epoch [{epoch}/{num_epoch}] train_loss:{self._training_step(model, train_loader, self.criterion)}")
             val_loss = self._validation_step(model, validation_loader, self.criterion, self.metric_dict)
 
             if epoch % save_config["freq"] == 0:
