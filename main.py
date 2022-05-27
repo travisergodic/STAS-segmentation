@@ -3,8 +3,7 @@ import time
 import numpy as np 
 import glob
 import argparse
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms
+from torch.utils.data import DataLoader
 from trainer import Trainer
 from data import StasDataset, Train_Preprocessor, Test_Preprocessor
 from batch_sampler import BatchSampler,RandomSampler
