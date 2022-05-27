@@ -3,8 +3,7 @@ import os
 import argparse
 from evaluate import Evaluator
 from data import Test_Preprocessor
-from congfigs.test_config import * 
-import tta
+from congfigs.test_config import *
 
 
 def boolean_string(s):
