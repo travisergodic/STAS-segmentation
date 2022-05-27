@@ -16,15 +16,15 @@ git clone https://github.com/davda54/sam.git
 ## 使用
 1. 訓練
 ```python
-python main.py --mode train
+python train.py --config_file "config_v1.py"
 ```
 2. 評估
 ```python
-python main.py --mode "evaluate" --model_path "./models/model_path.pt"
+python test.py --model_path "./models/model_path.pt"
 ```
 
 3. 預測
 ```python
-python main.py --mode "make_prediction" --model_path "./models/model_v2.pt" --target_dir "./data/Public_Image/" \
+python predict.py --model_path "./models/model_path.pt" --target_dir "./data/Public_Image/" \
                 --mask_mode "color" --do_tta "True"
 ```
