@@ -85,10 +85,10 @@ def train():
     start = time.time()
     
     ## get iter_hook_cls
-    iter_hook_cls = Iter_hook_dict.get(regularization_option, Normal_Iter_Hook)
+    Iter_Hook_CLS = Iter_Hook_dict.get(regularization_option, Normal_Iter_Hook)
     
-    print(f"Use iter hook of type <class {iter_hook_cls.__name__}> during training!")
-    train_pipeline = Trainer(optim_dict, decay_fn, loss_fn, metric_dict, iter_hook_cls(), DEVICE)
+    print(f"Use iter hook of type <class {Iter_Hook_CLS.__name__}> during training!")
+    train_pipeline = Trainer(optim_dict, decay_fn, loss_fn, metric_dict, Iter_Hook_CLS(), DEVICE)
     train_pipeline.fit(model, train_dataloader, test_dataloader, num_epoch, save_config)
     print(f"Training takes {time.time() - start} seconds!")
 

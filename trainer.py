@@ -15,9 +15,9 @@ class Trainer:
         optim_cls = self.optim_dict['optim_cls']
         optim_config = {k: self.optim_dict[k] for k in self.optim_dict if k != 'optim_cls'}
         if type(self.iter_hook).__name__[:3] == "SAM": 
-            return SAM(model.parameters(), optim_cls, optim_config)
+            return SAM(model.parameters(), optim_cls, **optim_config)
             # return SAM(model.parameters(), torch.optim.Adam, lr=lr)   
-        return optim_cls(model.parameters(), optim_config)
+        return optim_cls(model.parameters(), **optim_config)
         # return torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=0.0001)
 
     def _get_scheduler(self):
