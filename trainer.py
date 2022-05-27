@@ -3,28 +3,29 @@ from tqdm import tqdm
 from sam.sam import SAM
 
 class Trainer:
-    def __init__(self, optim_cls, decay_fn, criterion, metric_dict, iter_hook, device, **kwargs): 
+    def __init__(self, optim_dict, decay_fn, criterion, metric_dict, iter_hook, device): 
         self.decay_fn = decay_fn 
         self.device = device
         self.criterion = criterion
         self.metric_dict = metric_dict
         self.iter_hook = iter_hook
-        self.optim_cls = optim_cls
-        self.optim_cfg_dict = kwargs  
+        self.optim_dict = optim_dict
     
-    def _get_optimizer(self, model, optim_cls):
+    def _get_optimizer(self, model):
+        optim_cls = self.optim_dict['optim_cls']
+        optim_config = {k: self.optim_dict[k] for k in self.optim_dict if k != 'optim_cls'}
         if type(self.iter_hook).__name__[:3] == "SAM": 
-            return SAM(model.parameters(), optim_cls, **self.optim_cfg_dict)
+            return SAM(model.parameters(), optim_cls, optim_config)
             # return SAM(model.parameters(), torch.optim.Adam, lr=lr)   
-        return optim_cls(model.parameters(), **self.optim_cfg_dict)
+        return optim_cls(model.parameters(), optim_config)
         # return torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=0.0001)
 
-    def _get_scheduler(self, decay_fn):
-        return torch.optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda= decay_fn)
+    def _get_scheduler(self):
+        return torch.optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda= self.decay_fn)
     
     def fit(self, model, train_loader, validation_loader, num_epoch, save_config, track=False):
-        self.optimizer = self._get_optimizer(model, self.optim_cls)
-        self.scheduler = self._get_scheduler(self.decay_fn)
+        self.optimizer = self._get_optimizer(model)
+        self.scheduler = self._get_scheduler()
         self.scaler = torch.cuda.amp.GradScaler()
         best_performance, best_epoch = -100, 0
 

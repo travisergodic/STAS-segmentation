@@ -3,16 +3,8 @@ import torch
 from utils import mixup_data, cutmix_data, half_cutmix_data, mixup_criterion
 from kornia.augmentation import RandomErasing
 
+__all__ = ['Iter_hook_dict', 'Normal_Iter_Hook']
 
-
-__all__ = [
-    'SAM_Iter_Hook', 
-    'Mixup_Iter_Hook', 
-    'Cutmix_Iter_Hook', 
-    'Half_Cutmix_Iter_Hook', 
-    'Normal_Iter_Hook',
-    'Cutout_Iter_Hook'
-]
 
 class Base_Iter_Hook(ABC): 
     @abstractmethod
@@ -116,4 +108,13 @@ class Cutout_Iter_Hook(Base_Iter_Hook):
             trainer.scaler.step(trainer.optimizer)
             trainer.scaler.update()
         return loss.item()        
-        
+
+
+iter_hook_dict = {
+    "sam": SAM_Iter_Hook, 
+    "mixup": Mixup_Iter_Hook, 
+    "cutmix": Cutmix_Iter_Hook, 
+    "half_cutmix": Half_Cutmix_Iter_Hook,
+    "cutout": Cutout_Iter_Hook,
+    "normal": Normal_Iter_Hook
+}

@@ -78,23 +78,17 @@ def train():
         model = torch.load(checkpoint_path).to(DEVICE)
         print(f'Load model from {checkpoint_path} successfully!')
     else:
-        model = model_cls(**model_config).to(DEVICE)
+        model_config = {k: model_dict[k] for k in model_dict if k != 'model_cls'}
+        model = model_dict['model_cls'](**model_config).to(DEVICE)
     
     # train_model
     start = time.time()
     
     ## get iter_hook_cls
-    iter_hook_cls = {
-        "sam": SAM_Iter_Hook, 
-        "mixup": Mixup_Iter_Hook, 
-        "cutmix": Cutmix_Iter_Hook, 
-        "half_cutmix": Half_Cutmix_Iter_Hook,
-        "cutout": Cutout_Iter_Hook,
-        "normal": Normal_Iter_Hook
-    }.get(regularization_option, Normal_Iter_Hook)
+    iter_hook_cls = Iter_hook_dict.get(regularization_option, Normal_Iter_Hook)
     
     print(f"Use iter hook of type <class {iter_hook_cls.__name__}> during training!")
-    train_pipeline = Trainer(optim_cls, decay_fn, loss_fn, metric_dict, iter_hook_cls(), DEVICE, **optim_dict)
+    train_pipeline = Trainer(optim_dict, decay_fn, loss_fn, metric_dict, iter_hook_cls(), DEVICE)
     train_pipeline.fit(model, train_dataloader, test_dataloader, num_epoch, save_config)
     print(f"Training takes {time.time() - start} seconds!")
 
@@ -112,7 +106,7 @@ if __name__ == "__main__":
 
     from configs.config import *
     train()  
-    os.remove()
+    os.remove('./configs/config.py')
 
      
     

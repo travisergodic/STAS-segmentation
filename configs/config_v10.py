@@ -41,11 +41,19 @@ num_workers = 2
 num_epoch = 100
 decay_fn = lambda n: 1
 regularization_option = "sam"    # options: "sam", "mixup", "cutmix", "normal", "half_cutmix" 
+optim_cls = optim.AdamW
+# optim_dict = {
+#     'lr': 1e-4, 
+#     # 'weight_decay': 1e-2
+# }
+
 optim_dict = {
-    'optim_cls': optim.AdamW, 
     'lr': 5e-6, 
     'weight_decay': 3e-3
 }
+
+
+
 
 ## model 
 checkpoint_path = "/content/STAS-segmentation/models/model_v2.pt"
@@ -61,8 +69,9 @@ checkpoint_path = "/content/STAS-segmentation/models/model_v2.pt"
 # }
 
 # model_cls = segformer.build_segformer
-model_dict = {
-    "model_cls": transunet.build_transunet, 
+model_cls = transunet.build_transunet
+
+model_config = {
     "name": "R50-ViT-B_16", 
     "img_size": 384,
     "num_classes": 1, 
