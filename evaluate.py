@@ -9,34 +9,34 @@ import numpy as np
 import ttach as tta
 
 class Evaluator:
-    def __init__(self, model, image_transform, device='cuda', activation=nn.Sigmoid()):
-        if not isinstance(model, list): 
-            models = [model]
+    def __init__(self, models, image_transform, device='cuda', activation=nn.Sigmoid()):
+        models = models if isinstance(models, list) else [models]  
+        assert all([isinstance(model, nn.Module) for model in models])
         self.models = [
             nn.Sequential(
                 model,
                 nn.Identity() if activation is None else activation 
-            ).to(device)
-        for model in models]
+            ).to(device) for model in models
+        ]
     
         self.image_transform = image_transform
         self.device = device
 
     def _wrap_TTA(self, tta_transform): 
         if tta_transform:
-            models = [
+            return [
                 tta.SegmentationTTAWrapper(model, tta_transform, merge_mode='mean').eval() 
                 for model in self.models
             ]
-        else: 
-            models = [model.eval() for model in self.models]
-        return models
-
+        return [model.eval() for model in self.models]
     
     @torch.no_grad()
-    def _predict(self, model, path, mask_mode='color'):
+    def _predict(self, models, path, mask_mode='color'):
         x = self.image_transform(Image.open(path).convert('RGB'), None)[0].to(self.device) 
-        mask = model(x.unsqueeze(0)).squeeze() > 0.5
+        mask = torch.zeros(x.shape[-2:]).to(self.device)
+        for model in models: 
+            mask += model(x.unsqueeze(0)).squeeze()
+        mask = mask/len(models) > 0.5
 
         if mask_mode ==  'color': 
             mask = torch.where(mask, 255, 0)
