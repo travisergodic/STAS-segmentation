@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from semseg.models import *
 
+
 def build_segformer(backbone, pretrained=True, num_classes=1): 
     """
     'MiT-B2'
@@ -28,5 +29,23 @@ def build_segformer(backbone, pretrained=True, num_classes=1):
     return model
 
 
+def build_lawin(backbone, pretrained=True, num_classes=1):
+    model = Lawin(backbone)
+    
+    path_dict = {
+        "MiT-B1": "/content/drive/MyDrive/2-專案/玉山-醫學影像切割比賽/models/mit_b1.pth",
+        'MiT-B2': "/content/drive/MyDrive/2-專案/玉山-醫學影像切割比賽/models/mit_b2.pth",
+        'MiT-B3': "/content/drive/MyDrive/2-專案/玉山-醫學影像切割比賽/models/mit_b3.pth"
+    }
+    if pretrained: 
+        model.backbone.load_state_dict(torch.load(path_dict[backbone], map_location='cpu'))
+    
+    model.decode_head.linear_pred = nn.Conv2d(
+        model.decode_head.linear_pred.in_channels,
+        num_classes,
+        kernel_size=1
+    )
+
+    return model
 
 

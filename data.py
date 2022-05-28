@@ -90,12 +90,14 @@ class Train_Preprocessor(nn.Module):
     @torch.no_grad()
     def forward(self, img, label): 
         # random crop
-        # i, j = random.randint(0, 470), random.randint(0, 857)
-        # img = F.crop(img, i, j, 471, 858)
-        # label = F.crop(label, i, j, 471, 858)
+        W, H = img.size
+        w, h = random.randint(int(0.90*W), W), random.randint(int(0.90*H), H)
+        i, j = random.randint(0, H-h), random.randint(0, W-w)
+        img = F.crop(img, i, j, h, w)
+        label = F.crop(label, i, j, h, w)
 
         # resize & color transform 
-        img = self.blur(self.jitter(self.resize_image(img)))
+        img = self.blur(self.resize_image(img))
         label = self.resize_mask(label)
 
         # Random horizontal flipping
