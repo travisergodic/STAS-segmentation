@@ -2,24 +2,36 @@ import cv2
 import os 
 import torch 
 import torch.nn as nn
-from torchvision.transforms import Resize, InterpolationMode, Compose
-from torchvision.transforms.functional import hflip, vflip
-from data import Test_Preprocessor 
+from torchvision.transforms import Resize, InterpolationMode
 from tqdm import tqdm
 from PIL import Image
-import glob
 import numpy as np
 import ttach as tta
 
 class Evaluator:
     def __init__(self, model, image_transform, device='cuda', activation=nn.Sigmoid()):
-        self.model = nn.Sequential(
-            model,
-            nn.Identity() if activation is None else activation 
-        ).to(device)
-       
+        if not isinstance(model, list): 
+            models = [model]
+        self.models = [
+            nn.Sequential(
+                model,
+                nn.Identity() if activation is None else activation 
+            ).to(device)
+        for model in models]
+    
         self.image_transform = image_transform
         self.device = device
+
+    def _wrap_TTA(self, tta_transform): 
+        if tta_transform:
+            models = [
+                tta.SegmentationTTAWrapper(model, tta_transform, merge_mode='mean').eval() 
+                for model in self.models
+            ]
+        else: 
+            models = [model.eval() for model in self.models]
+        return models
+
     
     @torch.no_grad()
     def _predict(self, model, path, mask_mode='color'):
@@ -41,16 +53,12 @@ class Evaluator:
             label_paths = sorted([os.path.join(label_paths, basename) for basename in os.listdir(label_paths)])
         assert len(image_paths) == len(label_paths)
         
-        if tta_transform:
-            model = tta.SegmentationTTAWrapper(self.model, tta_transform, merge_mode='mean')
-        else: 
-            model = self.model
+        models = self._wrap_TTA(tta_transform)
         
-        total_score = 0 
-        model.eval()
+        total_score = 0
         for image_path, label_path in tqdm(list(zip(image_paths, label_paths))): 
             gt = torch.from_numpy(np.load(label_path)['image']).to(self.device)
-            mask = self._predict(model, image_path, 'class')
+            mask = self._predict(models, image_path, 'class')
             mask = Resize(gt.shape, InterpolationMode.NEAREST)(mask.unsqueeze(0)).squeeze()
             total_score += Evaluator.dice_score(mask, gt)
         return total_score/len(image_paths)            
@@ -69,14 +77,10 @@ class Evaluator:
         origin_size = cv2.imread(paths[0]).shape[:2]
         print(f"Use {origin_size} as output!")
 
-        if tta_transform:
-            model = tta.SegmentationTTAWrapper(self.model, tta_transform, merge_mode='mean')
-        else: 
-            model = self.model
+        models = self._wrap_TTA(tta_transform)
         
-        model.eval()
         for path in tqdm(paths): 
-            mask = self._predict(model, path, mask_mode)
+            mask = self._predict(models, path, mask_mode)
             mask = Resize(origin_size, InterpolationMode.NEAREST)(mask.unsqueeze(0)).squeeze()
             self._save(mask.cpu().numpy().astype(np.uint8), os.path.basename(path).split(".")[0] + ".png", save_dir)
         

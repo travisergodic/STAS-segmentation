@@ -4,7 +4,6 @@ import os
 import random
 import numpy as np
 from PIL import Image
-import patchify
 import torch 
 import torch.nn as nn
 from torch.utils.data import Dataset,DataLoader 
