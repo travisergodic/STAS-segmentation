@@ -74,7 +74,7 @@ class Train_Preprocessor(nn.Module):
             self.resize_image = nn.Identity()
             self.resize_mask = nn.Identity()
             
-        self.jitter = transforms.ColorJitter(0.25, 0.25, 0.25)
+        self.jitter = transforms.ColorJitter(0.15, 0.15)
         self.blur = transforms.GaussianBlur((1, 3))
         
         self.h_flip_p = h_flip_p
@@ -97,7 +97,7 @@ class Train_Preprocessor(nn.Module):
         label = F.crop(label, i, j, h, w)
 
         # resize & color transform 
-        img = self.blur(self.resize_image(img))
+        img = self.blur(self.jitter(self.resize_image(img)))
         label = self.resize_mask(label)
 
         # Random horizontal flipping
