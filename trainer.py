@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 from tqdm import tqdm 
 from sam.sam import SAM
 
@@ -30,12 +31,19 @@ class Trainer:
         for epoch in range(1, num_epoch+1):
             print(f"Epoch [{epoch}/{num_epoch}] train_loss:{self._training_step(model, train_loader, self.criterion)}")
             val_loss = self._validation_step(model, validation_loader, self.criterion, self.metric_dict)
-
+            # save model 
             if epoch % save_config["freq"] == 0:
-                torch.save(model, save_config["path"])
+                if isinstance(model, nn.DataParallel): 
+                    torch.save(model.module, save_config["path"])
+                else: 
+                    torch.save(model, save_config["path"])
+            # save best model
             if best_performance < -val_loss:
                 best_performance, best_epoch = -val_loss, epoch
-                torch.save(model, save_config["best_path"]) 
+                if isinstance(model, nn.DataParallel): 
+                    torch.save(model.module, save_config["path"])
+                else: 
+                    torch.save(model, save_config["path"])
             if track: 
                 self.scheduler.step(val_loss.item())
             else: 

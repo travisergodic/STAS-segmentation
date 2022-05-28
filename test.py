@@ -16,7 +16,7 @@ def boolean_string(s):
 
 def evaluate_all(model_paths, test_image_path_list, test_label_path_list):
     # load models
-    model_paths = model_paths.split(",")
+    model_paths = [path.strip() for path in model_paths.split(",")]
     models = [torch.load(model_path) for model_path in model_paths]
 
     # evaluate

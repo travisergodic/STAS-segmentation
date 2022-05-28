@@ -10,6 +10,7 @@ import transunet
 
 # device 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+distributed = False
 
 # config
 train_image_dir = '/content/STAS-segmentation/Train_Images/'

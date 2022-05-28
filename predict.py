@@ -16,7 +16,7 @@ def boolean_string(s):
 
 def make_prediction(model_paths, image_dir, mask_mode, do_tta):
     # load models
-    model_paths = model_paths.split(",")
+    model_paths = [path.strip() for path in model_paths.split(",")]
     models = [torch.load(model_path) for model_path in model_paths]
 
     # create predict_result directory 

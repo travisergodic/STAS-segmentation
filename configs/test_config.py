@@ -2,7 +2,7 @@ import ttach as tta
 import torch
 import torch.nn as nn 
 
-test_img_size = (448, 448)
+test_img_size = (512, 512)
 tta_fn = tta.aliases.flip_transform()
 activation = nn.Sigmoid()
 image_dir = '/content/STAS-segmentation/Train_Images/'
