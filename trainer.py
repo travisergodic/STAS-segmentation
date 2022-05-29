@@ -41,9 +41,9 @@ class Trainer:
             if best_performance < -val_loss:
                 best_performance, best_epoch = -val_loss, epoch
                 if isinstance(model, nn.DataParallel): 
-                    torch.save(model.module, save_config["path"])
+                    torch.save(model.module, save_config["best_path"])
                 else: 
-                    torch.save(model, save_config["path"])
+                    torch.save(model, save_config["best_path"])
             if track: 
                 self.scheduler.step(val_loss.item())
             else: 
