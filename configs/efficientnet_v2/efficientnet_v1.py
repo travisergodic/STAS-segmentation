@@ -25,20 +25,20 @@ multiscale_list = [416, 320, 352, 384]
 # preprocess
 ann_suffix = '.npz'
 img_suffix = '.jpg'
-train_img_size = (512, 512)
-test_img_size = (512, 512)
+train_img_size = (384, 384)
+test_img_size = (384, 384)
 h_flip_p=0.5
 v_flip_p=0.5
 affine_p=0.
 
 # dataloader
 train_ratio = 0.85
-train_batch_size = 7
-test_batch_size =  14
+train_batch_size = 16
+test_batch_size =  32
 num_workers = 2
 
 # train config 
-num_epoch = 50
+num_epoch = 100
 decay_fn = lambda n: 1
 regularization_option = "normal"    # options: "sam", "mixup", "cutmix", "normal", "half_cutmix" 
 optim_dict = {
@@ -51,10 +51,11 @@ optim_dict = {
 checkpoint_path = "/content/STAS-segmentation/models/model_v2.pt"
 
 model_dict = {
-    'model_cls': segformer.build_segformer,
-    'backbone': 'MiT-B3',
-    'pretrained': True,
-    'num_classes': 1
+    'model_cls': smp.UnetPlusPlus,
+    'encoder_name': 'tu-tf_efficientnetv2_l_in21k',
+    'encoder_weights': 'imagenet',
+    'in_channels': 3,            
+    'classes': 1
 }
 
 # model_dict = {
@@ -83,8 +84,7 @@ class MixLoss:
         return self.focal_loss(pred, targets) + self.dice_loss(pred, targets)
 
 
-loss_fn = MixLoss()
-# smp.utils.losses.DiceLoss(activation='sigmoid')
+loss_fn = smp.utils.losses.DiceLoss(activation='sigmoid')
 
 # lm.GDiceLossV2(nn.Softmax(dim=1), do_bg=False, smooth=1e-5)
 # lm.IoULoss(nn.Softmax(dim=1), batch_dice=True, do_bg=False, smooth=1e-6, square=True)
