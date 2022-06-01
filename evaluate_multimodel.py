@@ -32,11 +32,11 @@ class Evaluator:
     
     @torch.no_grad()
     def _predict(self, models, path, size, mask_mode='color'):
-        mask = torch.zeros(x.shape[-2:]).to(self.device)
+        mask = torch.zeros(size).to(self.device)
         for i, model in enumerate(models): 
             x = self.image_transforms[i](Image.open(path).convert('RGB'), None)[0].to(self.device) 
-            prediction = model(x.unsqueeze(0)).squeeze()
-            mask += Resize(size, InterpolationMode.NEAREST)(prediction)
+            prediction = model(x.unsqueeze(0))
+            mask += Resize(size, InterpolationMode.NEAREST)(prediction).squeeze()
 
         mask = mask/len(models) > 0.5
 
