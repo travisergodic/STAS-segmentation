@@ -75,11 +75,6 @@ class Trainer:
         for data, targets in validation_loader:
             data = data.to(device=self.device)
             targets = targets.type(torch.float).to(device=self.device)
-
-            if data.ndim != 4: 
-                data = data.flatten(0, - 4)
-                targets = targets.flatten(0, - 4)  
-
             predictions = model(data)
             loss = criterion(predictions, targets)
             test_loss += loss.item() * targets.size(0)
