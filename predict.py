@@ -16,8 +16,8 @@ def boolean_string(s):
 
 def make_prediction(model_paths, image_dir, mask_mode, do_tta):
     # load models
-    model_paths = [path.strip() for path in model_paths.split(",")]
-    models = [torch.load(model_path) for model_path in model_paths]
+    models = [torch.load(model_path.strip()) for model_path in model_paths.split(",")]
+    test_image_transforms =  [Test_Preprocessor(img_size) for img_size in test_img_size_list]
 
     # create predict_result directory 
     if os.path.isdir('./predict_result'): 
@@ -27,11 +27,12 @@ def make_prediction(model_paths, image_dir, mask_mode, do_tta):
     os.mkdir('./predict_result')   
     print("Create directory: predict_result/")
 
-    test_image_transform =  Test_Preprocessor(test_img_size)
+    # make predictions
     evaluator = Evaluator(models, 
-                          test_image_transform, 
+                          test_image_transforms, 
                           device=DEVICE, 
                           activation=activation)
+
     evaluator.make_prediction(image_dir, 
                               './predict_result', 
                               tta_fn if do_tta else False, 

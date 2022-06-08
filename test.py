@@ -16,17 +16,16 @@ def boolean_string(s):
 
 def evaluate_all(model_paths, test_image_path_list, test_label_path_list):
     # load models
-    model_paths = [path.strip() for path in model_paths.split(",")]
-    models = [torch.load(model_path) for model_path in model_paths]
+    models = [torch.load(model_path.strip()) for model_path in model_paths.split(",")]
 
     # evaluate
-    test_image_transform =  Test_Preprocessor(test_img_size)
-    evaluator = Evaluator(models, test_image_transform, device=DEVICE, activation=activation)
+    test_image_transforms =  [Test_Preprocessor(img_size) for img_size in test_img_size_list]
+    evaluator = Evaluator(models, test_image_transforms, device=DEVICE, activation=activation)
     ## no TTA
-    score = evaluator.evaluate(test_image_path_list, test_label_path_list, False)
+    score = evaluator.evaluate(test_image_path_list, test_label_path_list, 'dice_score', False)
     print(f"No TTA: {score} (Dice score).")
     ## TTA
-    score = evaluator.evaluate(test_image_path_list, test_label_path_list, tta_fn)
+    score = evaluator.evaluate(test_image_path_list, test_label_path_list, 'dice_score', tta_fn)
     print(f"With TTA: {score} (Dice score).")   
 
 if __name__ == "__main__":
